@@ -1,0 +1,38 @@
+name: Terraform workflow to kickstart infra setup and manage entire life cycle of the infra resources
+
+on:
+  push:
+    branches: [ main ]  #feature/syn-pop-prod
+  pull_request:
+    branches: [ feature/* ]
+  workflow_dispatch:
+    inputs:
+      cloud_provider:
+        type: choice
+        description: 'Please choose the target Cloud Provider'
+        default: 'aws'
+        required: true
+        options:
+          - 'aws'
+          - 'azure'
+          - 'gcp'
+          - 'other'
+
+env:
+  TARGET_CLOUD_PROVIDER: ${{ secrets.ENV_VAR_TEST_FROM_GH_SECRETS }}
+  ENV_VAR_TEST_FROM_GH_SECRETS: ${{ github.event.inputs.cloud_provider }}
+
+jobs:
+  # *** This workflow contains a single job called "build" ***
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Create or Update Synergist POP
+        run: chmod +x ./workflow.sh && ./workflow.sh "${{ env.ENV_VAR_TEST_FROM_GH_SECRETS }}" "${{ env.ENV_VAR_TEST_FROM_GH_SECRETS }}"
+
+
