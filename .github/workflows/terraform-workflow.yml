@@ -19,8 +19,8 @@ on:
           - 'other'
 
 env:
-  TARGET_CLOUD_PROVIDER: ${{ secrets.ENV_VAR_TEST_FROM_GH_SECRETS }}
-  ENV_VAR_TEST_FROM_GH_SECRETS: ${{ github.event.inputs.cloud_provider }}
+  ENV_VAR_TEST_FROM_GH_SECRETS: ${{ secrets.ENV_VAR_TEST_FROM_GH_SECRETS }}
+  TARGET_CLOUD_PROVIDER : ${{ github.event.inputs.cloud_provider }}
 
 jobs:
   # *** This workflow contains a single job called "build" ***
@@ -33,6 +33,6 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Create or Update Synergist POP
-        run: chmod +x ./workflow.sh && ./workflow.sh "${{ env.ENV_VAR_TEST_FROM_GH_SECRETS }}" "${{ env.ENV_VAR_TEST_FROM_GH_SECRETS }}"
+        run: chmod +x ./workflow.sh && ./workflow.sh "${{ env.ENV_VAR_TEST_FROM_GH_SECRETS }}" "${{ env.TARGET_CLOUD_PROVIDER }}"
 
 
