@@ -1,0 +1,28 @@
+FROM alpine:3.14
+
+RUN apk add bash
+RUN apk add aws-cli
+RUN apk add openssh-keygen
+
+COPY / /
+
+ARG aws_account_id=""
+ENV aws_account_id=""
+
+ARG aws_access_key_id=""
+ENV aws_access_key_id=""
+
+ARG aws_secret_access_key=""
+ENV aws_secret_access_key=""
+
+ARG aws_region=""
+ENV aws_region=""
+
+RUN mkdir ~/.aws
+RUN echo "[default]" >> ~/.aws/credentials
+RUN echo "aws_access_key_id=$aws_account_id" >> ~/.aws/credentials
+RUN echo "aws_secret_access_key=$aws_access_key_id" >> ~/.aws/credentials
+RUN echo "region=us-west-2" >> ~/.aws/credentials
+RUN echo "output=json" >> ~/.aws/credentials
+
+ENTRYPOINT ["bash", "kickstart_aws_ecr_cred_sync.sh"]
