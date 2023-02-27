@@ -2,7 +2,7 @@ name: Terraform workflow to kickstart infra setup and manage entire life cycle o
 
 on:
   push:
-    branches: [ main ]  #feature/syn-pop-prod
+    branches: [ dummy ]  #feature/syn-pop-prod
   pull_request:
     branches: [ feature/* ]
   workflow_dispatch:

@@ -40,9 +40,16 @@ jobs:
       uses: koslib/helm-eks-action@master
       with:
         command: |
+          mkdir ~/.aws
+          echo "[default]" >> ~/.aws/credentials
+          echo ""aws_access_key_id=${{ env.aws_access_key_id }}"" >> ~/.aws/credentials
+          echo "aws_secret_access_key=${{ env.aws_secret_access_key }}" >> ~/.aws/credentials
+          echo "region=eu-west-2" >> ~/.aws/credentials
+          echo "output=json" >> ~/.aws/credentials
+
           echo "KUBE_CONFIG_DATA=${{ secrets.KUBE_CONFIG_DATA_K3S1 }}" >> $GITHUB_ENV
           echo "Deploying AWS ECR reg creds in kubernetes:"
-            #AWS_PROFILE_NAME=default
+            AWS_PROFILE_NAME=default
             ACCOUNTID=$(AWS_PROFILE=$AWS_PROFILE_NAME aws sts get-caller-identity | jq ".Account" -r)
             export AWS_DEFAULT_REGION=eu-west-2
             export AWS_ACCESS_KEY_ID="${{ env.aws_access_key_id }}"
