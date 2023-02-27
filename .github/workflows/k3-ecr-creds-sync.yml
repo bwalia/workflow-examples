@@ -26,16 +26,48 @@ env:
   task_name : ${{ github.event.inputs.task_name }}
 
 jobs:
-  # *** This workflow contains a single job called "build" ***
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+    - name: Check out this repo code
+      uses: actions/checkout@v2
+      with:
+        ref: "main"
 
-      - name: AWS ECR repository creds sync
-        run: chmod +x ./aws_cli_ecr_creds_sync.sh && ./aws_cli_ecr_creds_sync.sh "${{ env.aws_account_id }}" "${{ env.aws_access_key_id }}" "${{ env.aws_secret_access_key }}" "${{ env.aws_region }}"
+    - name: Run bash script to perform Cluster kubeconfig mapping
+      uses: koslib/helm-eks-action@master
+      with:
+        command: |
+          echo "KUBE_CONFIG_DATA=${{ secrets.KUBE_CONFIG_DATA_K3S1 }}" >> $GITHUB_ENV
+          echo "Deploying AWS ECR reg creds in kubernetes:"
+            AWS_PROFILE_NAME=default
+            ACCOUNTID=$(AWS_PROFILE=$AWS_PROFILE_NAME aws sts get-caller-identity | jq ".Account" -r)
+            export AWS_DEFAULT_REGION=eu-west-2
+            export AWS_ACCESS_KEY_ID="${{ env.aws_access_key_id }}"
+            export AWS_SECRET_ACCESS_KEY="${{ env.aws_secret_access_key }}"
+            SECRET_NAME=$AWS_DEFAULT_REGION-ecr-registry
+            EMAIL=bwalia@tenthmatrix.co.uk
+          # This token expires every 12 hours
+            TOKEN=`aws ecr --region=$AWS_DEFAULT_REGION get-authorization-token --output text \
+                --query authorizationData[].authorizationToken | base64 -d | cut -d: -f2`
 
+            kubectl delete secret --ignore-not-found $SECRET_NAME
+            kubectl create secret docker-registry $SECRET_NAME \
+                --docker-server=https://$ACCOUNTID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com \
+                --docker-username=AWS \
+                --docker-password="$TOKEN" \
+                --docker-email="$EMAIL"
 
+          echo "KUBE_CONFIG_DATA=${{ secrets.KUBE_CONFIG_DATA_K3S2 }}" >> $GITHUB_ENV
+            
+            kubectl delete secret --ignore-not-found $SECRET_NAME
+            kubectl create secret docker-registry $SECRET_NAME \
+                --docker-server=https://$ACCOUNTID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com \
+                --docker-username=AWS \
+                --docker-password="$TOKEN" \
+                --docker-email="$EMAIL"
+
+      # - name: AWS ECR repository creds sync
+      #   run: chmod +x ./aws_cli_ecr_creds_sync.sh && ./aws_cli_ecr_creds_sync.sh "${{ env.aws_account_id }}" "${{ env.aws_access_key_id }}" "${{ env.aws_secret_access_key }}" "${{ env.aws_region }}"

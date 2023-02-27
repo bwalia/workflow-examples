@@ -3,6 +3,7 @@ FROM alpine:3.14
 RUN apk add bash
 RUN apk add aws-cli
 RUN apk add openssh-keygen
+RUN apk add kubectl
 
 COPY / /
 
