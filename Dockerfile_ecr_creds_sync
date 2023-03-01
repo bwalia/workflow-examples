@@ -17,17 +17,20 @@ RUN apk add aws-cli
 #RUN apk add git
 #RUN apk add terraform
 # RUN apk add openssh-client
-RUN apk add openssh-keygen
-
-WORKDIR /
+#RUN apk add openssh-keygen
 
 RUN mkdir ~/.aws
-RUN echo "[default]" >> ~/.aws/credentials
-RUN echo "aws_access_key_id=$AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
-RUN echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
-RUN echo "region=$AWS_DEFAULT_REGION" >> ~/.aws/credentials
-RUN echo "output=json" >> ~/.aws/credentials
 
+#Do not need it if we pass env vars
+#RUN echo "[default]" >> ~/.aws/credentials
+#RUN echo "output=json" >> ~/.aws/credentials
+
+RUN echo "[default]" >> ~/.aws/config
+RUN echo "region=$AWS_DEFAULT_REGION" >> ~/.aws/config
+RUN echo "output=json" >> ~/.aws/config
+RUN cat ~/.aws/config
+
+WORKDIR /
 COPY / /
 
 ENTRYPOINT ["bash", "kickstart_aws_ecr_cred_sync.sh"]
