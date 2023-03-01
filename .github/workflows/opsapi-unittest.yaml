@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ feature/* ]
   schedule:
-    - cron: "0 * * * *" #Need to run everyday
+    - cron: "0 0 * * *" #Need to run everyday
 
 jobs:
   build:
