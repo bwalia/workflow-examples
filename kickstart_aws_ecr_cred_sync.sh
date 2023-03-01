@@ -4,14 +4,14 @@ set -x
 
 echo "Deploying AWS ECR reg creds in kubernetes clusters:"
 
-AWS_PROFILE=default
+#AWS_PROFILE=default
 
 aws sts get-caller-identity
 
-ACCOUNTID=$(AWS_PROFILE=$AWS_PROFILE aws sts get-caller-identity | jq ".Account" -r)
-REGION=eu-west-2
-SECRET_NAME=$REGION-ecr-registry
-EMAIL=bwalia@tenthmatrix.co.uk
+#ACCOUNTID=$(AWS_PROFILE=$AWS_PROFILE aws sts get-caller-identity | jq ".Account" -r)
+#REGION=eu-west-2
+#SECRET_NAME=$REGION-ecr-registry
+#EMAIL=bwalia@tenthmatrix.co.uk
 
 # This token expires every 12 hours
 #TOKEN=`aws ecr --region=$REGION get-authorization-token --output text \
