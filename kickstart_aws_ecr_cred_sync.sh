@@ -2,11 +2,15 @@
 
 set -x
 
-echo "Deploying AWS ECR reg creds in kubernetes clusters:"
+#echo "Deploying AWS ECR reg creds in kubernetes clusters:"
 
 #AWS_PROFILE=default
 
-aws sts get-caller-identity
+ls -latr
+
+pwd
+
+#aws sts get-caller-identity
 
 #ACCOUNTID=$(AWS_PROFILE=$AWS_PROFILE aws sts get-caller-identity | jq ".Account" -r)
 #REGION=eu-west-2
