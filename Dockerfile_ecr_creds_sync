@@ -1,29 +1,29 @@
 FROM alpine:3.14
 
+ENV AWS_ACCOUNT_ID=""
+ENV AWS_ACCESS_KEY_ID=""
+ENV AWS_SECRET_ACCESS_KEY=""
+ENV AWS_DEFAULT_REGION="eu-west-2"
+ENV AWS_PROFILE="default"
+
+ARG AWS_ACCOUNT_ID=""
+ARG AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+ARG AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+ARG AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+ARG AWS_PROFILE=$AWS_PROFILE
+
 RUN apk add bash
 RUN apk add aws-cli
+#RUN apk add git
+#RUN apk add terraform
+# RUN apk add openssh-client
 RUN apk add openssh-keygen
-RUN apk add kubectl
-
-COPY / /
-
-ARG aws_account_id=""
-ENV aws_account_id=""
-
-ARG aws_access_key_id=""
-ENV aws_access_key_id=""
-
-ARG aws_secret_access_key=""
-ENV aws_secret_access_key=""
-
-ARG aws_region=""
-ENV aws_region=""
 
 RUN mkdir ~/.aws
 RUN echo "[default]" >> ~/.aws/credentials
-RUN echo "aws_access_key_id=$aws_account_id" >> ~/.aws/credentials
-RUN echo "aws_secret_access_key=$aws_access_key_id" >> ~/.aws/credentials
-RUN echo "region=us-west-2" >> ~/.aws/credentials
+RUN echo "aws_access_key_id=$AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+RUN echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+RUN echo "region=$AWS_DEFAULT_REGION" >> ~/.aws/credentials
 RUN echo "output=json" >> ~/.aws/credentials
 
 ENTRYPOINT ["bash", "kickstart_aws_ecr_cred_sync.sh"]

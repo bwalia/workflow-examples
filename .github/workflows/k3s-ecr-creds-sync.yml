@@ -36,20 +36,5 @@ jobs:
       with:
         ref: "main"
 
-    - name: Run bash script to perform Cluster kubeconfig mapping
-      uses: koslib/helm-eks-action@master
-      with:
-        command: |
-          mkdir ~/.aws
-          echo "[default]" >> ~/.aws/credentials
-          echo ""aws_access_key_id=${{ env.aws_access_key_id }}"" >> ~/.aws/credentials
-          echo "aws_secret_access_key=${{ env.aws_secret_access_key }}" >> ~/.aws/credentials
-          echo "region=eu-west-2" >> ~/.aws/credentials
-          echo "output=json" >> ~/.aws/credentials
-          aws sts get-caller-identity
-          ls -latr ~/.aws
-          cat ~/.aws/credentials
-
-
-      # - name: AWS ECR repository creds sync
-      #   run: chmod +x ./aws_cli_ecr_creds_sync.sh && ./aws_cli_ecr_creds_sync.sh "${{ env.aws_account_id }}" "${{ env.aws_access_key_id }}" "${{ env.aws_secret_access_key }}" "${{ env.aws_region }}"
+    - name: AWS ECR repository creds sync
+      run: chmod +x ./aws_cli_ecr_creds_sync.sh && ./aws_cli_ecr_creds_sync.sh "${{ env.aws_account_id }}" "${{ env.aws_access_key_id }}" "${{ env.aws_secret_access_key }}" "${{ env.aws_region }}"
