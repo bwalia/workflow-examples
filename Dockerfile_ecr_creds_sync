@@ -26,4 +26,7 @@ RUN echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
 RUN echo "region=$AWS_DEFAULT_REGION" >> ~/.aws/credentials
 RUN echo "output=json" >> ~/.aws/credentials
 
+WORKDIR /
+COPY / /
+
 ENTRYPOINT ["bash", "kickstart_aws_ecr_cred_sync.sh"]
