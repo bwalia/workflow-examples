@@ -44,6 +44,9 @@ else
       KUBE_CONFIG_DATA_K3S2=$6
 fi
 
+echo "${KUBE_CONFIG_DATA_K3S1}" | base64 -d > /k3s1.yaml
+echo "${KUBE_CONFIG_DATA_K3S2}" | base64 -d > /k3s2.yaml
+
 docker build -f Dockerfile_ecr_creds_sync -t ecr_creds_sync . --no-cache
 
 docker run \
@@ -51,12 +54,8 @@ docker run \
 -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" \
 -e "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" \
 -e "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}" \
--e "KUBE_CONFIG_DATA_K3S1=${KUBE_CONFIG_DATA_K3S1}" \
--e "KUBE_CONFIG_DATA_K3S2=${KUBE_CONFIG_DATA_K3S2}" \
 -v "AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}" \
 -v "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" \
 -v "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" \
--v "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}" \
--v "KUBE_CONFIG_DATA_K3S1=${KUBE_CONFIG_DATA_K3S1}" \
--v "KUBE_CONFIG_DATA_K3S2=${KUBE_CONFIG_DATA_K3S2}" ecr_creds_sync
+-v "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}" ecr_creds_sync
 

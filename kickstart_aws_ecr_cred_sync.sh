@@ -16,10 +16,10 @@ EMAIL=bwalia@tenthmatrix.co.uk
 TOKEN=`aws ecr --region=$REGION get-authorization-token --output text \
     --query authorizationData[].authorizationToken | base64 -d | cut -d: -f2`
 
-env
+#env
 
 #echo $KUBE_CONFIG_DATA_K3S1 | base64 -d > k3s1.yaml
-#ls -latr
+ls -latr
 
 #export KUBECONFIG=k3s1.yaml
 
