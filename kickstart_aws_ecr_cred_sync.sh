@@ -16,29 +16,31 @@ EMAIL=bwalia@tenthmatrix.co.uk
 TOKEN=`aws ecr --region=$REGION get-authorization-token --output text \
     --query authorizationData[].authorizationToken | base64 -d | cut -d: -f2`
 
-echo $KUBE_CONFIG_DATA_K3S1 | base64 -d > k3s1.yaml
-ls -latr
+env
 
-export KUBECONFIG=k3s1.yaml
+#echo $KUBE_CONFIG_DATA_K3S1 | base64 -d > k3s1.yaml
+#ls -latr
 
-kubectl version
+#export KUBECONFIG=k3s1.yaml
 
-kubectl delete secret --ignore-not-found $SECRET_NAME
-kubectl create secret docker-registry $SECRET_NAME \
-    --docker-server=https://$ACCOUNT.dkr.ecr.$REGION.amazonaws.com \
-    --docker-username=AWS \
-    --docker-password="$TOKEN" \
-    --docker-email="$EMAIL"
+#kubectl version
 
-echo $KUBE_CONFIG_DATA_K3S2 | base64 -d > k3s2.yaml
-ls -latr
-export KUBECONFIG=k3s2.yaml
+#kubectl delete secret --ignore-not-found $SECRET_NAME
+#kubectl create secret docker-registry $SECRET_NAME \
+#    --docker-server=https://$ACCOUNT.dkr.ecr.$REGION.amazonaws.com \
+#    --docker-username=AWS \
+#    --docker-password="$TOKEN" \
+#    --docker-email="$EMAIL"
 
-kubectl version
+#echo $KUBE_CONFIG_DATA_K3S2 | base64 -d > k3s2.yaml
+#ls -latr
+#export KUBECONFIG=k3s2.yaml
 
-kubectl delete secret --ignore-not-found $SECRET_NAME
-kubectl create secret docker-registry $SECRET_NAME \
-    --docker-server=https://$ACCOUNT.dkr.ecr.$REGION.amazonaws.com \
-    --docker-username=AWS \
-    --docker-password="$TOKEN" \
-    --docker-email="$EMAIL"
+#kubectl version
+
+#kubectl delete secret --ignore-not-found $SECRET_NAME
+#kubectl create secret docker-registry $SECRET_NAME \
+#    --docker-server=https://$ACCOUNT.dkr.ecr.$REGION.amazonaws.com \
+#    --docker-username=AWS \
+#    --docker-password="$TOKEN" \
+#    --docker-email="$EMAIL"
