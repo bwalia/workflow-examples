@@ -2,7 +2,7 @@ name: opsapi unit test suite
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dummy ]
   pull_request:
     branches: [ feature/* ]
   schedule:
