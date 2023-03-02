@@ -24,7 +24,7 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: ${{ vars.AWS_REGION }}
   task_name : ${{ github.event.inputs.task_name }}
-
+  
 jobs:
   build:
     # The type of runner that the job will run on
@@ -37,4 +37,7 @@ jobs:
         ref: "main"
 
     - name: AWS ECR repository creds sync
-      run: chmod +x ./aws_cli_ecr_creds_sync.sh && ./aws_cli_ecr_creds_sync.sh
+      run: |
+        echo "KUBE_CONFIG_DATA_K3S1=${{ secrets.KUBE_CONFIG_DATA_K3S1 }}" >> $GITHUB_ENV
+        echo "KUBE_CONFIG_DATA_K3S2=${{ secrets.KUBE_CONFIG_DATA_K3S2 }}" >> $GITHUB_ENV
+        chmod +x ./aws_cli_ecr_creds_sync.sh && ./aws_cli_ecr_creds_sync.sh
