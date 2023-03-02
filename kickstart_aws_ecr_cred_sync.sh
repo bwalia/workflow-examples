@@ -18,7 +18,8 @@ EMAIL=bwalia@tenthmatrix.co.uk
 TOKEN=`aws ecr --region=$REGION get-authorization-token --output text \
     --query authorizationData[].authorizationToken | base64 -d | cut -d: -f2`
 
-export KUBECONFIG=$KUBE_CONFIG_DATA_K3S1
+echo $KUBE_CONFIG_DATA_K3S1 | base64 -d > k3s1.yaml
+export KUBECONFIG=k3s1.yaml
 
 kubectl version
 
@@ -29,7 +30,8 @@ kubectl create secret docker-registry $SECRET_NAME \
     --docker-password="$TOKEN" \
     --docker-email="$EMAIL"
 
-export KUBECONFIG=$KUBE_CONFIG_DATA_K3S2
+echo $KUBE_CONFIG_DATA_K3S2 | base64 -d > k3s2.yaml
+export KUBECONFIG=k3s2.yaml
 
 kubectl version
 
