@@ -12,9 +12,11 @@ ARG AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ARG AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
 ARG AWS_PROFILE=$AWS_PROFILE
 
+#apk update
 RUN apk add bash
 RUN apk add aws-cli
 RUN apk add jq
+RUN apk add docker
 
 #	RUN apk add git
 #	RUN apk add terraform
@@ -35,5 +37,9 @@ RUN cat ~/.aws/config
 
 WORKDIR /
 COPY / /
+
+RUN curl -LO https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl
+RUN chmod +x kubectl
+RUN mv kubectl /usr/local/bin/
 
 ENTRYPOINT ["bash", "kickstart_aws_ecr_cred_sync.sh"]
