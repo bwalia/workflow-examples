@@ -22,7 +22,7 @@ env:
   aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
   aws_access_key_id: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   aws_secret_access_key : ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  aws_region: ${{ secrets.AWS_REGION }}
+  aws_region: ${{ var.AWS_REGION }}
   task_name : ${{ github.event.inputs.task_name }}
 
 jobs:
