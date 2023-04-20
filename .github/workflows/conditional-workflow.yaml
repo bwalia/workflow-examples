@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v2 
         with:
           ref: "main"
-      if: github.repository == 'octo-org/octo-repo-prod'
+
       - name: Run ls
         run: ls -la
 
