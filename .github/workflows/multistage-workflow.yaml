@@ -15,12 +15,19 @@ jobs:
         with:
           ref: "main"
 
-  stageone:
+  fakebreak:
     runs-on: ubuntu-latest
     needs: [checkout]
     steps:
+      - name: Run go
+        run: go test
+
+  stageone:
+    runs-on: ubuntu-latest
+    needs: [fakebreak]
+    steps:
       - name: Run pwd
-        run: pwd
+        run: pwd        
   
   stagetwo:
     runs-on: ubuntu-latest
