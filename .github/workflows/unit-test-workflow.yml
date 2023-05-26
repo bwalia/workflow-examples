@@ -1,0 +1,27 @@
+name: Workflow for run Test Suite
+on:
+  push:
+    branches: [ dummy ] 
+  workflow_dispatch:  
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19    
+
+    - name: Test
+      working-directory: ./ # Where the test code exist
+      run: | 
+        go mod init myapp
+        go test -v 
+      env: 
+        LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
+        LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+        BUSINESS_ID: ${{ secrets.BUSINESS_ID }} 
+      

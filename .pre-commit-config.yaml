@@ -1,0 +1,25 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+    -   id: check-yaml
+-   repo: https://github.com/codespell-project/codespell.git
+    rev: v2.2.4
+    hooks:
+    -   id: codespell
+-   repo: https://github.com/pre-commit/pre-commit-hooks.git
+    rev: v4.4.0
+    hooks:
+    -   id: detect-private-key
+    -   id: no-commit-to-branch #Stop commit directly to main branch
+-   repo: https://github.com/jumanjihouse/pre-commit-hooks.git
+    rev: 3.0.0
+    hooks:
+    -   id: git-check #Check both committed and uncommitted files for git conflict+ Whitespace error
+
+
+# Before you can run hooks, you need to have the pre-commit package manager installed. 
+# Follow these steps
+# 1.sudo apt install python3-pip
+# 2.sudo pip install pre-commit
+# 3.pre-commit install
