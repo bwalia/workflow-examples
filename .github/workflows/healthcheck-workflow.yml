@@ -1,0 +1,25 @@
+name: CDN-API-Test
+on:
+  push:
+    branches: [ dummy ] 
+  workflow_dispatch:  
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19       
+  
+    - name: Test
+      working-directory: ./  # Where the test code exist
+      env:
+          API_PING_URL: https://domain_name/ping # Replace with the ping API url
+      run: | 
+        go mod init myapp
+        go test -v 
+      
