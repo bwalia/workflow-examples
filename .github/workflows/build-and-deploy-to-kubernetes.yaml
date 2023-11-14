@@ -1,0 +1,100 @@
+# .github/workflows/deploy.yml
+name: 1-Click Helm Deploy App to a given ENV into a given Kubernetes cluster
+
+on:
+  push:
+    branches: [ dummy ]
+
+  workflow_dispatch:
+    inputs:
+      ENV_REF:
+        type: choice
+        description: 'Please choose the Target Environment'
+        default: 'test'
+        required: true
+        options:
+        - test
+        - acc
+        - prod
+
+      TARGET_CLUSTER:      
+        type: choice
+        description: 'Please choose the Target K3S Cluster(s)'
+        default: 'k3s2'
+        required: true
+        options:
+        - k3s1
+        - k3s2
+        - k3s3
+        - All
+
+      IMAGE_REGISTRY:
+        type: choice
+        description: 'Please choose docker image registry to push'
+        default: 'docker.workstation.co.uk'
+        required: true
+        options:
+        - bwalia
+        - ghcr.io
+        - docker.workstation.co.uk
+        - registry.workstation.co.uk
+
+      IMAGE_NAME:
+        type: choice
+        description: 'Please choose docker image name to push'
+        default: 'your-image-name'
+        required: true
+        options:
+        - your-image-name
+        - workstation
+        - webimpetus
+
+      IMAGE_TAG:
+        type: choice
+        description: 'Please choose docker image tag to push'
+        default: 'latest'
+        required: true
+        options:
+        - latest
+        - stable
+        - prod
+        - acc
+        - test
+        - dev
+
+env:
+  TARGET_ENV: ${{ github.event.inputs.ENV_REF || 'int' }}
+  TARGET_CLUSTER: ${{ github.event.inputs.TARGET_CLUSTER }}
+
+  IMAGE_REGISTRY: ${{ github.event.inputs.IMAGE_REGISTRY || 'docker.workstation.co.uk'}}
+  IMAGE_NAME: ${{ github.event.inputs.IMAGE_NAME || 'webimpetus' }}
+  IMAGE_TAG: ${{ github.event.inputs.IMAGE_TAG || 'latest' }}
+  TARGET_STACK: openresty_php
+
+  KUBE_CONFIG_DATA_K3S: ${{ secrets.KUBE_CONFIG_DATA_K3S1 }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out this repo code
+      uses: actions/checkout@v2
+      with:
+        ref: "main"
+
+    - name: Run bash script to map variables docker images and kubeconfig
+      run: |
+        if [ "${{ env.IMAGE_REGISTRY }}" == "" ]; then
+          echo "IMAGE_REGISTRY=docker.workstation.co.uk" >> $GITHUB_ENV
+        else
+          echo "IMAGE_REGISTRY is provided : ${{ env.IMAGE_REGISTRY }}"
+        fi
+        echo "Map variables docker images and kubeconfig - done!"
+      shell: bash
+
+    - name: Helm Deploy - Release to selected K3S cluster
+      uses: koslib/helm-eks-action@master
+      with:
+        command: |
+          helm version
+          kubectl version
