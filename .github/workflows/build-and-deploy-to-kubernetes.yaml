@@ -71,7 +71,7 @@ env:
   IMAGE_TAG: ${{ github.event.inputs.IMAGE_TAG || 'latest' }}
   TARGET_STACK: openresty_php
 
-  KUBE_CONFIG_DATA_K3S: ${{ secrets.KUBE_CONFIG_DATA_K3S1 }}
+  KUBE_CONFIG_DATA_K3S: 
 
 jobs:
   build:
@@ -92,15 +92,26 @@ jobs:
         echo "Map variables docker images and kubeconfig - done!"
       shell: bash
 
-    - name: Helm Deploy - Release to selected K3S cluster
+    - name: Helm Deploy - Release AKS Azure
       uses: koslib/helm-eks-action@master
+      env:
+        KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA_K3S1 }}
       with:
         command: |
-            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
-            echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
-            chmod +x kubectl
-            mkdir -p ~/.local/bin
-            mv ./kubectl ~/.local/bin/kubectl
-            kubectl version --client
-            helm version
-            kubectl version
+          helm version
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          
+    - name: Restart Pods using Kubectl            
+      uses: actions-hub/kubectl@master
+      env:
+        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_DATA_K3S1 }}
+      with:
+        args: get pods -A         
+
+    - name: Print history using Kubectl            
+      uses: actions-hub/kubectl@master
+      env:
+        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_DATA_K3S1 }}
+      with:
+        args: get deployments -A          
