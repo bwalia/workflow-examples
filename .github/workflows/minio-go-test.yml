@@ -1,0 +1,24 @@
+name: minio-s3-storage-test
+
+on:
+  workflow_dispatch:  
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build docker image 
+      run: |
+        docker build -t minio-object-test -f dockerfile_minio_go .
+    - name: Run docker image 
+      run: |
+        docker run -e MINIO_ENDPOINT=$MINIO_ENDPOINT -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY minio-object-test
+
+      env: 
+        MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+        MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+        MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+
+      
