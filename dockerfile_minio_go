@@ -1,0 +1,12 @@
+FROM golang:latest
+
+WORKDIR /app
+
+# Install minio-Go dependencies
+RUN go mod init myapp && \
+    go get -u github.com/minio/minio-go/v7 && \
+    go get -u github.com/minio/minio-go/v7/pkg/credentials
+
+COPY . /app
+
+CMD go test minio-object-store_test.go -v
