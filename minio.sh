@@ -2,8 +2,10 @@
 export MINIO_ENDPOINT=$MINIO_ENDPOINT
 export MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY
 export MINIO_SECRET_KEY=$MINIO_SECRET_KEY
+export USERNAME=$USERNAME
+export PASSWORD=$PASSWORD
 
-mysql -u root -p password webimpetus_int > /app/dump.sql
+mysql -u $USERNAME -p $PASSWORD webimpetus_int > /app/dump.sql
 echo "mc alias set myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY"
 mc alias set myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
 
