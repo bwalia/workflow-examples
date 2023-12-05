@@ -11,7 +11,7 @@ jobs:
 
     - name: Build docker image 
       run: |
-        docker build -t minio-object-test -f dockerfile_minio_go .
+        docker build -t minio-object-test -f Dockerfile_minio_go .
     - name: Run docker image 
       run: |
         docker run -e MINIO_ENDPOINT=$MINIO_ENDPOINT -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY minio-object-test

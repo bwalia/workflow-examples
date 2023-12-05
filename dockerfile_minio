@@ -1,5 +1,9 @@
-FROM ubuntu:22.04
+FROM alpine:3.14
 
+RUN apk add bash
+RUN apk add terraform
+RUN apk add mysql-client
+RUN apk add openssh-keygen
 
 ARG MINIO_ENDPOINT
 ARG MINIO_ACCESS_KEY
@@ -7,17 +11,16 @@ ARG MINIO_SECRET_KEY
 ARG USERNAME
 ARG PASSWORD
 
-ENV MINIO_ENDPOINT $MINIO_ENDPOINT
-ENV MINIO_ACCESS_KEY $MINIO_ACCESS_KEY
-ENV MINIO_SECRET_KEY $MINIO_SECRET_KEY
-ENV USERNAME $USERNAME
-ENV PASSWORD $PASSWORD
+ENV MINIO_ENDPOINT=$MINIO_ENDPOINT
+ENV MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY
+ENV MINIO_SECRET_KEY=$MINIO_SECRET_KEY
+ENV USERNAME=$USERNAME
+ENV PASSWORD=$PASSWORD
 
-RUN apt-get update && apt-get install -y curl mysql-client
+RUN apk add curl mysql-client bash
 
 # Install mc from Minio's GitHub release
-RUN curl -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc && \
-    chmod +x /usr/local/bin/mc
+RUN curl -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc && chmod +x /usr/local/bin/mc
 
 # Copy the repository files to the container
 COPY . /app

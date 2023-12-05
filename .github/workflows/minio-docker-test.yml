@@ -11,7 +11,7 @@ jobs:
 
     - name: Build docker image 
       run: |
-        docker build --no-cache --build-arg MINIO_ENDPOINT=$MINIO_ENDPOINT --build-arg MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY --build-arg MINIO_SECRET_KEY=$MINIO_SECRET_KEY -t minio-docker-test -f dockerfile_minio .
+        docker build --no-cache --build-arg MINIO_ENDPOINT=$MINIO_ENDPOINT --build-arg MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY --build-arg MINIO_SECRET_KEY=$MINIO_SECRET_KEY -t minio-docker-test -f Dockerfile_minio .
 
     - name: Run docker image 
       run: |

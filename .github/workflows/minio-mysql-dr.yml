@@ -1,8 +1,23 @@
-name: minio-mysql-dr
+name: MySQL Database Backup Disaster Recovery
 
 on:
-  workflow_dispatch:  
-    
+  workflow_dispatch:
+    inputs:
+      TARGET_ENV:
+        type: choice
+        description: 'Please choose the mysql environment'
+        default: 'int'
+        required: true
+        options:
+          - 'dev'    
+          - 'int'    
+          - 'test'    
+          - 'acc'    
+          - 'prod'
+
+env:
+  TARGET_ENV : ${{ github.event.inputs.TARGET_ENV || 'int' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -11,14 +26,15 @@ jobs:
 
     - name: Build docker image 
       run: |
-        docker build --no-cache --build-arg MINIO_ENDPOINT=$MINIO_ENDPOINT --build-arg MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY --build-arg MINIO_SECRET_KEY=$MINIO_SECRET_KEY --build-arg USERNAME=$USERNAME --build-arg PASSWORD=$PASSWORD-t minio-docker-test -f dockerfile_minio .
+       docker build --no-cache -t minio-docker-test -f Dockerfile_minio .
+
+#      docker build --no-cache --build-arg MINIO_ENDPOINT=$MINIO_ENDPOINT --build-arg MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY --build-arg MINIO_SECRET_KEY=$MINIO_SECRET_KEY --build-arg USERNAME=$USERNAME --build-arg PASSWORD=$PASSWORD-t minio-docker-test -f Dockerfile_minio .
 
     - name: Run docker image 
       run: |
-        docker run minio-docker-test
-
-
+        docker run -e MYSQL_ENV=${{ env.TARGET_ENV }} -e MINIO_ENDPOINT=$MINIO_ENDPOINT -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY -e USERNAME=$USERNAME -e PASSWORD=$PASSWORD minio-docker-test
       env: 
+        MYSQL_ENV: ${{ env.TARGET_ENV }}
         MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
         MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
         MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}

@@ -1,0 +1,46 @@
+name: DevSecOps Demo Multistage Workflow
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ feature/* ]
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout the repo code
+        uses: actions/checkout@v2 
+        with:
+          ref: "main"
+
+  fakebreak:
+    runs-on: ubuntu-latest
+    needs: [checkout]
+    steps:
+      - name: Run go
+        run: go test
+
+  stageone:
+    runs-on: ubuntu-latest
+    needs: [fakebreak]
+    steps:
+      - name: Run pwd
+        run: pwd        
+  
+  stagetwo:
+    runs-on: ubuntu-latest
+    needs: [stageone]
+    steps:
+      - name: Run ls
+        run: ls -la
+
+  stagethree:
+    runs-on: ubuntu-latest
+    needs: [stagetwo]
+    steps:
+      - name: Security analysis of the code
+        run: echo "Security analysis of the code"
+
+      
