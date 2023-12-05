@@ -1,0 +1,95 @@
+name: "Build and Deploy ENV of Healthstat API Gateway to AKS Azure"
+
+on:
+  push:
+    branches: [ main ]
+    
+  workflow_dispatch:
+    inputs:
+      TARGET_ENV:
+        type: choice
+        description: 'Please choose the environment'
+        default: 'acc'
+        required: true
+        options:
+          - test
+          - acc
+          - prod
+        
+env:
+  TARGET_ENV: "${{ inputs.TARGET_ENV || 'test' }}"
+  # Test env is default for any other environment select from the pop manually
+  DOCKER_REGISTRY: "docker.io"
+  DOCKER_USERNAME: "username"
+  DOCKER_PASSWORD: "password"
+  IMAGE_NAME: "webimpetus"
+  IMAGE_TAG: ${{ github.ref_name }}
+  KUBE_CONFIG_AKS_AZURE: "kubeconfigbase64encoded"
+
+jobs:
+  image_build_push:
+    runs-on: [ ubuntu-latest ]
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Login to Nexus
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ env.DOCKER_USERNAME }}
+        password: ${{ env.DOCKER_PASSWORD }}
+    - name: Build Base Healthstat API Gateway Image and Push and Tag it selected environment
+      if: "!github.event.release.prerelease"
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        file: Dockerfile
+        push: true
+        provenance: false
+        build-args: |
+          ENV=${{ env.TARGET_ENV }}
+        tags: |
+          ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ env.TARGET_ENV }}
+          ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+    - name: Map Cluster kubeconfig for selected env
+      run: |
+        if [ "${{ env.TARGET_ENV }}" == "test" ]; then
+          echo "KUBE_CONFIG_AKS_AZURE=${{ secrets.KUBE_CONFIG_AKS_AZURE_TEST }}" >> $GITHUB_ENV
+        else
+          echo "KUBE_CONFIG_AKS_AZURE is set to default env"
+        fi
+        if [ "${{ env.TARGET_ENV }}" == "acc" ]; then
+          echo "KUBE_CONFIG_AKS_AZURE=${{ secrets.KUBE_CONFIG_AKS_AZURE_ACC }}" >> $GITHUB_ENV
+        else
+          echo "KUBE_CONFIG_AKS_AZURE is set to default env"
+        fi
+        if [ "${{ env.TARGET_ENV }}" == "prod" ]; then
+          echo "KUBE_CONFIG_AKS_AZURE=${{ secrets.KUBE_CONFIG_AKS_AZURE_PROD }}" >> $GITHUB_ENV
+        else
+          echo "KUBE_CONFIG_AKS_AZURE is set to default env"
+        fi
+              
+    - name: Helm Deploy - Release Healthstat API Gateway to AKS Azure
+      uses: koslib/helm-eks-action@master
+      env:
+        KUBE_CONFIG_DATA: ${{ env.KUBE_CONFIG_AKS_AZURE }}
+      with:
+        command: |
+          helm upgrade --install --set TARGET_ENV=${{ env.TARGET_ENV }} -f devops/hd_healthstatapigw_helmchart/values-azure-${{ env.TARGET_ENV }}.yaml hd-healthstatapi-${{ env.TARGET_ENV }} devops/hd_healthstatapigw_helmchart/  --create-namespace --namespace ns-${{ env.TARGET_ENV }}        
+          
+    - name: Restart Healthstat API Gateway Pods using Kubectl            
+      uses: actions-hub/kubectl@master
+      env:
+        KUBE_CONFIG: ${{ env.KUBE_CONFIG_AKS_AZURE }}
+      with:
+        args: rollout restart deployment/pod-hdhealthstatapigw -n ns-${{ env.TARGET_ENV }}          
+
+    - name: Print Healthstat API Gateway deployment history using Kubectl            
+      uses: actions-hub/kubectl@master
+      env:
+        KUBE_CONFIG: ${{ env.KUBE_CONFIG_AKS_AZURE }}
+      with:
+        args: rollout history deployment/pod-hdhealthstatapigw -n ns-${{ env.TARGET_ENV }}
