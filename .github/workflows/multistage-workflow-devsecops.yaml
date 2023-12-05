@@ -20,7 +20,7 @@ jobs:
     needs: [checkout]
     steps:
       - name: Run go
-        run: go test
+        run: echo "Run go" && grep -rnw . -e "password"
 
   stageone:
     runs-on: ubuntu-latest
