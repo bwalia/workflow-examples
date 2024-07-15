@@ -50,7 +50,7 @@ jobs:
 
     - name: Download backup from MinIO
       env:
-        BACKUP_PATH: "${{ env.TARGET_ENV }}/${{ env.FILE_NAME }}"
+        BACKUP_PATH: "${{ env.FILE_NAME }}"
       run: |
         ls -al /tmp
         echo $BACKUP_PATH
