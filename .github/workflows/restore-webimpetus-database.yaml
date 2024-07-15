@@ -54,6 +54,7 @@ jobs:
         echo ${{ secrets.MINIO_ENDPOINT }}
         echo ${{ secrets.MINIO_ACCESS_KEY }}
         echo ${{ secrets.MINIO_SECRET_KEY }}
+        which mc
         mc cp myminio/webimpetus-database/$BACKUP_PATH /tmp/backup.sql
 
     - name: Restore database
