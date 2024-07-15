@@ -49,12 +49,17 @@ jobs:
       env:
         BACKUP_PATH: "${{ env.TARGET_ENV }}/${{ env.FILE_NAME }}"
       run: |
-        mc cp myminio/webimpetus-database/$BACKUP_PATH ./tmp/backup.sql
+        ls -al /tmp
+        echo $BACKUP_PATH
+        echo ${{ secrets.MINIO_ENDPOINT }}
+        echo ${{ secrets.MINIO_ACCESS_KEY }}
+        echo ${{ secrets.MINIO_SECRET_KEY }}
+        mc cp myminio/webimpetus-database/$BACKUP_PATH /tmp/backup.sql
 
     - name: Restore database
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
-        cat ./tmp/backup.sql
+        cat /tmp/backup.sql
 
       
