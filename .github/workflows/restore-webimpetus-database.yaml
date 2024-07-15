@@ -48,9 +48,16 @@ jobs:
       run: |
         mc ls myminio
 
+    - name: Check if backup file exists on MinIO
+      env:
+        BACKUP_PATH: "${{ env.TARGET_ENV }}/${{ env.FILE_NAME }}"
+      run: |
+        echo "Checking if file exists: myminio/backups/$BACKUP_PATH"
+        mc stat myminio/backups/$BACKUP_PATH || { echo "File does not exist."; exit 1; }
+
     - name: Download backup from MinIO
       env:
-        BACKUP_PATH: "${{ env.FILE_NAME }}"
+        BACKUP_PATH: "${{ env.TARGET_ENV }}/${{ env.FILE_NAME }}"
       run: |
         ls -al /tmp
         echo $BACKUP_PATH
