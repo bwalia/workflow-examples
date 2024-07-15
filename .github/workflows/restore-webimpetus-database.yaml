@@ -46,8 +46,10 @@ jobs:
         mc alias set myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
 
     - name: Download backup from MinIO
+      env:
+        BACKUP_PATH: "${{ env.TARGET_ENV }}/$${{ env.FILE_NAME }}"
       run: |
-        mc cp myminio/webimpetus-backups/${{ env.TARGET_ENV }}/${{ env.FILE_NAME }} ./tmp/backup.sql
+        mc cp myminio/webimpetus-database/$BACKUP_PATH ./tmo/backup.sql
 
     - name: Restore database
       env:
