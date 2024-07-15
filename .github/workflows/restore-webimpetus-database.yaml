@@ -15,7 +15,6 @@ on:
           - 'acc'    
           - 'prod'
       FILE_NAME:
-        type: text
         description: 'Please enter the file name'
         required: true
 
@@ -44,6 +43,10 @@ jobs:
         MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
       run: |
         mc alias set myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
+
+    - name: List MinIO buckets and files
+      run: |
+        mc ls myminio
 
     - name: Download backup from MinIO
       env:
