@@ -52,8 +52,8 @@ jobs:
       env:
         BACKUP_PATH: "${{ env.TARGET_ENV }}/${{ env.FILE_NAME }}"
       run: |
-        echo "Checking if file exists: myminio/backups/$BACKUP_PATH"
-        mc stat myminio/backups/$BACKUP_PATH || { echo "File does not exist."; exit 1; }
+        echo "Checking if file exists: myminio/webimpetus-database/$BACKUP_PATH"
+        mc stat myminio/webimpetus-database/$BACKUP_PATH || { echo "File does not exist."; exit 1; }
 
     - name: Download backup from MinIO
       env:
