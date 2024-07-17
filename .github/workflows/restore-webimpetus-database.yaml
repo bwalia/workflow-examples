@@ -60,18 +60,18 @@ jobs:
       env:
         BACKUP_PATH: "${{ env.TARGET_ENV }}/${{ env.FILE_NAME }}"
       run: |
-        ls -al /tmp
-        echo $BACKUP_PATH
-        echo ${{ secrets.MINIO_ENDPOINT }}
-        echo ${{ secrets.MINIO_ACCESS_KEY }}
-        echo ${{ secrets.MINIO_SECRET_KEY }}
-        which mc
         mc cp myminio/webimpetus-database/$BACKUP_PATH /tmp/backup.sql
 
-    - name: Restore database
+    - name: Install MySQL client
+      run: sudo apt-get install mysql-client
+  
+    - name: Restore MySQL database
       env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+        MYSQL_USER: ${{ secrets.MYSQL_USER }}
+        MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
       run: |
-        cat /tmp/backup.sql
+        mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE < /tmp/backup.sql
 
       
