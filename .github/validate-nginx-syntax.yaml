@@ -1,0 +1,33 @@
+name: CI with nginx
+
+on:
+  push:
+	branches:
+	  - main
+  pull_request:
+	branches:
+	  - main
+
+jobs:
+  build:
+	runs-on: ubuntu-latest
+
+	services:
+	  nginx:
+		image: nginx:latest
+		ports:
+		  - 8080:80
+		options: --mount type=bind,source=$ github.workspace /nginx.conf,target=/etc/nginx/nginx.conf
+
+	steps:
+	  - name: Checkout code
+		uses: actions/checkout@v3
+
+	  - name: Set up nginx
+		run: |
+		  sudo cp nginx.conf /etc/nginx/nginx.conf
+		  sudo systemctl restart nginx
+    - name: Validate nginx
+    run: |
+      sudo nginx -t
+		
