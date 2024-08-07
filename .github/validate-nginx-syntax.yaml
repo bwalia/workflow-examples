@@ -3,10 +3,10 @@ name: Validate NGINX Configuration
 on:
   push:
     branches:
-      - main
+      - nginx-syntax-validator
   pull_request:
     branches:
-      - main
+      - nginx-syntax-validator
 
 jobs:
   validate-nginx:
@@ -25,4 +25,4 @@ jobs:
 
       - name: Test NGINX configuration
         run: sudo nginx -t
-
+r
