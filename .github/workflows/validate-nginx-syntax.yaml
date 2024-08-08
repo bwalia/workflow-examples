@@ -25,4 +25,3 @@ jobs:
 
       - name: Test NGINX configuration
         run: sudo nginx -t
-r
