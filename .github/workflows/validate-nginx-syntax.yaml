@@ -24,4 +24,4 @@ jobs:
           sudo cp nginx.conf /etc/nginx/nginx.conf
 
       - name: Test NGINX configuration
-        run: sudo nginx -t
+        run: cat /etc/nginx/nginx.conf && nginx
