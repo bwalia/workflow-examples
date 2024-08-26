@@ -3,7 +3,7 @@ name: CDN-API-Test
 on:
   push:
     branches:
-      - github-alert
+      - main
 
 jobs:
   build:
