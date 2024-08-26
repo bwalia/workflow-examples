@@ -1,0 +1,24 @@
+name: CDN-API-Test
+on:
+     push:
+          branches: 
+              -  github-alert
+
+jobs:
+  build:
+    name: git pull alert on slack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+
+      - name: git pull alert on slack notification 
+         uses: rtCamp/action-slack-notify@v2
+         env:
+            SLACK_CHANNEL: github-updates
+            SLACK_COLOR: ${{ job.status }}
+            SLACK_ICON: https://github.com/rtCamp.png?size=48
+            SLACK_MESSAGE: 'run a  git pull command since the  source code in the main branch is updated'
+            SLACK_TITLE: git pull alert
+            SLACK_USERNAME: rtCamp
+            SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
