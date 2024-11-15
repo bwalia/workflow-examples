@@ -1,0 +1,32 @@
+---
+- name: Install Nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Add nginx base configuration
+  template:
+    src: default.conf.j2
+    dest: /etc/nginx/sites-available/default
+    owner: "www-data"
+    group: root
+    mode: "0644"
+
+- name: Copy Nginx PID file
+  template:
+    src: nginx.pid.j2
+    dest: /run/nginx.pid
+    owner: "www-data"
+    group: root
+    mode: "0775"
+
+- name: Configure Nginx for Kibana
+  template:
+    src: kibana.conf.j2
+    dest: /etc/nginx/sites-available/kibana
+
+- name: Start and enable Nginx
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes

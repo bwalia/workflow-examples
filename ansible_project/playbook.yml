@@ -1,0 +1,8 @@
+---
+- name: Setup Nginx and ELK Stack
+  hosts: all
+  become: yes
+  roles:
+    - common
+    - nginx
+    - elk
