@@ -6,3 +6,4 @@
     - common
     - nginx
     - elk
+    - logstash_nginx

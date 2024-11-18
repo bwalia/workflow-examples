@@ -1,0 +1,10 @@
+---
+- name: Restart Logstash
+  service:
+    name: logstash
+    state: restarted
+
+- name: Restart Nginx
+  service:
+    name: nginx
+    state: restarted
