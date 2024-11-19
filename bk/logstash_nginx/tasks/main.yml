@@ -1,0 +1,27 @@
+- name: Install required dependencies
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - openjdk-11-jre-headless
+    - logstash
+
+- name: Ensure Logstash service is started and enabled
+  service:
+    name: logstash
+    state: started
+    enabled: yes
+
+- name: Upload Logstash configuration for Nginx logs
+  copy:
+    src: nginx_logs.conf
+    dest: /etc/logstash/conf.d/nginx_logs.conf
+    owner: logstash
+    group: logstash
+    mode: '0644'
+
+- name: Restart Logstash to apply changes
+  service:
+    name: logstash
+    state: restarted

@@ -3,6 +3,8 @@
   apt:
     name: nginx
     state: present
+  tags: 
+    - nginx
 
 - name: Add nginx base configuration
   template:
@@ -11,6 +13,8 @@
     owner: "www-data"
     group: root
     mode: "0644"
+  tags: 
+    - nginx
 
 - name: Copy Nginx PID file
   template:
@@ -19,14 +23,20 @@
     owner: "www-data"
     group: root
     mode: "0775"
+  tags: 
+    - nginx
 
 - name: Configure Nginx for Kibana
   template:
     src: kibana.conf.j2
     dest: /etc/nginx/sites-available/kibana
+  tags: 
+    - nginx
 
 - name: Start and enable Nginx
   systemd:
     name: nginx
     state: started
     enabled: yes
+  tags: 
+    - nginx

@@ -3,58 +3,80 @@
   apt_key:
     url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
     state: present
+  tags: 
+    - elastic
 
 - name: Add Elastic repository
   apt_repository:
     repo: "deb https://artifacts.elastic.co/packages/7.x/apt stable main"
     state: present
+  tags: 
+    - elastic
 
 - name: Install Elasticsearch
   apt:
     name: elasticsearch
     state: present
+  tags: 
+    - elastic
 
 - name: Start and enable Elasticsearch
   systemd:
     name: elasticsearch
     state: started
     enabled: yes
+  tags: 
+    - elastic
 
 - name: Install Logstash
   apt:
     name: logstash
     state: present
+  tags:
+    - logstash
 
 - name: Start and enable Logstash
   systemd:
     name: logstash
     state: started
     enabled: yes
+  tags:
+    - logstash
 
 - name: Install Kibana
   apt:
     name: kibana
     state: present
+  tags:
+    - kibana
 
 - name: Start and enable Kibana
   systemd:
     name: kibana
     state: started
     enabled: yes
+  tags:
+    - kibana
 
 - name: Enable Kibana Nginx site
   file:
     src: /etc/nginx/sites-available/kibana
     dest: /etc/nginx/sites-enabled/kibana
     state: link
+  tags:
+    - kibana
 
 - name: Test Nginx configuration
   command: nginx -t
   register: nginx_test
   ignore_errors: true
+  tags:
+    - nginx
 
 - name: Restart Nginx if configuration is valid
   service:
     name: nginx
     state: restarted
   when: nginx_test.rc == 0
+  tags:
+    - nginx
