@@ -1,0 +1,33 @@
+input {
+    file {
+        path => "/var/log/nginx/*.log"
+        start_position => "beginning"
+        sincedb_path => "/dev/null"
+    }
+}
+
+
+filter {
+  if [path] =~ "access.log" {
+    grok {
+      match => { "message" => "%{IPORHOST:client_ip} - %{DATA:user} \[%{HTTPDATE:timestamp}\] \"%{WORD:method} %{DATA:request} HTTP/%{NUMBER:http_version}\" %{NUMBER:status} %{NUMBER:bytes_sent} \"%{DATA:referrer}\" \"%{DATA:user_agent}\"" }
+    }
+    date {
+      match => ["timestamp", "dd/MMM/yyyy:HH:mm:ss Z"]
+      target => "@timestamp"
+    }
+  } else if [path] =~ "error.log" {
+    grok {
+      match => { "message" => "\[%{DATA:timestamp}\] %{LOGLEVEL:loglevel} %{DATA:module}: %{GREEDYDATA:message}" }
+    }
+  }
+}
+
+
+output {
+    elasticsearch {
+        hosts => ["localhost:9200"]
+        index => "nginx-logs-%{+yyyy.MM.dd}"
+    }
+    stdout { codec => rubydebug }
+}

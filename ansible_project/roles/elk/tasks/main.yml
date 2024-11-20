@@ -35,6 +35,16 @@
   tags:
     - logstash
 
+- name: Add nginx base configuration
+  template:
+    src: logstash.conf.j2
+    dest: /etc/logstash/conf.d/logstash-pipeline.conf
+    owner: "www-data"
+    group: root
+    mode: "0644"
+  tags: 
+    - logstash
+
 - name: Start and enable Logstash
   systemd:
     name: logstash
