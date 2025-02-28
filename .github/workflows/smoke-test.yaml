@@ -18,6 +18,7 @@ jobs:
         with:
           build: npm run build
           start: npm start
+          project: cypress
           browser: chrome
 
       - name: 'Upload screenshots and videos to Slack'
