@@ -22,6 +22,7 @@ jobs:
 
       - name: Run Cypress Tests
         id: cypress
+        working-directory: ./cypress
         run: |
           npx cypress run || echo "cypress_failed=true" >> $GITHUB_ENV
 
@@ -35,7 +36,7 @@ jobs:
       - name: Slack Notification for Whitefalcon Admin UI Smoke Login Test 
         uses: rtCamp/action-slack-notify@v2
         env:
-            SLACK_CHANNEL: general
+            SLACK_CHANNEL: cypress-test-results
             SLACK_COLOR: ${{ job.status }}
             SLACK_ICON: https://github.com/rtCamp.png?size=48
             SLACK_MESSAGE: 'Smoketest Login Test using Cypress ${{ env.TARGET_ENV }} env :rocket:'
