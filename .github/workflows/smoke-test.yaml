@@ -31,14 +31,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cypress-screenshots
-          path: cypress/screenshots
+          path: cypress/cypress/screenshots
 
       - name: Upload Cypress Videos
         if: failure() || env.cypress_failed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: cypress-videos
-          path: cypress/videos
+          path: cypress/cypress/videos
 
       - name: Send Success Notification to Slack
         if: success()
