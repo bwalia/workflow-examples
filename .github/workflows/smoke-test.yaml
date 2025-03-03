@@ -18,7 +18,7 @@ jobs:
         with:
           build: npm run build
           start: npm start
-          project: cypress
+          cache-dependency-path: cypress/package-lock.json
           browser: chrome
 
       - name: 'Upload screenshots and videos to Slack'
