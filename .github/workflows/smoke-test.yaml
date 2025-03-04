@@ -26,38 +26,21 @@ jobs:
         run: |
           npx cypress run || echo "cypress_failed=true" >> $GITHUB_ENV
 
-      - name: Upload Cypress Screenshots
-        if: failure() || env.cypress_failed == 'true'
-        uses: actions/upload-artifact@v4
+      - name: 'Upload screenshots and videos to Slack'
+        uses: trymbill/cypress-slack-video-upload-action@v1.3.0
         with:
-          name: cypress-screenshots
-          path: cypress/cypress/screenshots
+            token: ${{ secrets.SLACK_TOKEN }}
+            channels: 'cypress-test-results'
+            workdir: workflow-examples/cypress/cypress
 
-      - name: Upload Cypress Videos
-        if: failure() || env.cypress_failed == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-videos
-          path: cypress/cypress/videos
-
-      - name: Send Success Notification to Slack
-        if: success()
+      - name: Slack Notification for Smoke Test 
+        uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "channel": "#cypress-test-results",
-            "text": "✅ *Cypress Tests Passed!* :rocket: \n Repository: ${{ github.repository }}",
-            "username": "Cypress Bot",
-            "icon_emoji": ":white_check_mark:"
-          }' $SLACK_WEBHOOK_URL
-
-      - name: Send Failure Notification to Slack
-        if: failure() || env.cypress_failed == 'true'
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-        run: |
-          FILES=$(find cypress/screenshots cypress/videos -type f | head -3)  # Limit to 3 files
-          for FILE in $FILES; do
-            curl -F file=@$FILE -F "initial_comment=❌ Cypress Test Failure: See attached file." -F channels=#cypress-test-results -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" https://slack.com/api/files.upload
-          done
+            SLACK_CHANNEL: general
+            SLACK_COLOR: ${{ job.status }}
+            SLACK_ICON: https://github.com/rtCamp.png?size=48
+            SLACK_MESSAGE: 'UI Smoke Login Test using Cypress Test framework env :rocket:'
+            SLACK_TITLE: UI Smoke Login Test 
+            SLACK_USERNAME: rtCamp
+            SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  
