@@ -31,7 +31,7 @@ jobs:
         with:
             token: ${{ secrets.SLACK_TOKEN }}
             channels: 'cypress-test-results'
-            workdir: workflow-examples/cypress/cypress
+            workdir: cypress/cypress
 
       - name: Slack Notification for Smoke Test 
         uses: rtCamp/action-slack-notify@v2
