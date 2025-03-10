@@ -39,7 +39,7 @@ jobs:
         if: failure()
         with:
           token: ${{ secrets.SLACK_TOKEN }}
-          channels: 'engineering-ops'
+          channels: 'cypress-test-results'
           message-text: 'Cypress tests failed! They have been placed in this thread, good luck.'
 
       
