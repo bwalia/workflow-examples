@@ -32,15 +32,14 @@ jobs:
             token: ${{ secrets.SLACK_TOKEN }}
             channels: 'cypress-test-results'
             workdir: cypress/cypress
+            message-text: 'Cypress Test Passed!'
+            
+      - name: 'Upload screenshots and videos to Slack'
+        uses: trymbill/cypress-slack-video-upload-action@v1.3.0
+        if: failure()
+        with:
+          token: ${{ secrets.SLACK_TOKEN }}
+          channels: 'engineering-ops'
+          message-text: 'Cypress tests failed! They have been placed in this thread, good luck.'
 
-      - name: Slack Notification for Smoke Test 
-        uses: rtCamp/action-slack-notify@v2
-        env:
-            SLACK_CHANNEL: general
-            SLACK_COLOR: ${{ job.status }}
-            SLACK_ICON: https://github.com/rtCamp.png?size=48
-            SLACK_MESSAGE: 'UI Smoke Login Test using Cypress Test framework env :rocket:'
-            SLACK_TITLE: UI Smoke Login Test 
-            SLACK_USERNAME: rtCamp
-            SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-  
+      
