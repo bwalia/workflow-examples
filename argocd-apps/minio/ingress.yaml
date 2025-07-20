@@ -13,7 +13,7 @@ spec:
   tls:
     - hosts:
         - s3.workstation.co.uk
-      secretName: s3-minio-tls
+      secretName: s3-minio-tls-lmbrs
   rules:
     - host: s3.workstation.co.uk
       http:
