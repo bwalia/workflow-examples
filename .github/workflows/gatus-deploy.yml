@@ -29,7 +29,7 @@ env:
 jobs:
   deploy:
     name: Deploy Gatus to K3s
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository
