@@ -1,0 +1,17 @@
+apiVersion: v2
+name: gatus
+description: A Helm chart for deploying Gatus - Automated developer-oriented status page
+type: application
+version: 1.0.0
+appVersion: "5.11.0"
+keywords:
+  - gatus
+  - status-page
+  - monitoring
+  - health-check
+  - uptime
+maintainers:
+  - name: DevOps Team
+home: https://github.com/TwiN/gatus
+sources:
+  - https://github.com/TwiN/gatus

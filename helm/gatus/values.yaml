@@ -1,0 +1,220 @@
+# Default values for Gatus Helm chart
+# This is a YAML-formatted file.
+
+replicaCount: 1
+
+image:
+  repository: twinproduction/gatus
+  pullPolicy: IfNotPresent
+  tag: "v5.11.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 65534
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: "nginx" # Use traefik for k3s, change to nginx if needed
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    # For traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # For nginx (uncomment if using nginx)
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: status.workstation.co.uk
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: gatus-tls
+      hosts:
+        - status.workstation.co.uk
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Persistence for Gatus data
+persistence:
+  enabled: true
+  storageClass: "" # Use default storage class
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+
+# Gatus configuration
+# Add your endpoints here - you can add as many domains as you want
+gatus:
+  # Web UI configuration
+  web:
+    port: 8080
+
+  # Storage configuration (SQLite for persistence)
+  storage:
+    type: sqlite
+    path: /data/data.db
+
+  # UI customization
+  ui:
+    title: "Status Page"
+    description: "Service Health Status"
+    header: "Service Status"
+    logo: ""
+    link: ""
+
+  # Alerting configuration (optional)
+  alerting:
+    # Slack alerting (uncomment and configure if needed)
+    # slack:
+    #   webhook-url: "https://hooks.slack.com/services/xxx/xxx/xxx"
+    #   default-alert:
+    #     enabled: true
+    #     failure-threshold: 3
+    #     success-threshold: 2
+    #     send-on-resolved: true
+    #     description: "health check failed"
+
+    # Email alerting (uncomment and configure if needed)
+    # email:
+    #   from: "gatus@example.com"
+    #   host: "smtp.example.com"
+    #   port: 587
+    #   username: ""
+    #   password: ""
+    #   default-alert:
+    #     enabled: true
+    #     failure-threshold: 3
+    #     success-threshold: 2
+
+  # Default settings applied to all endpoints
+  defaults:
+    endpoints:
+      interval: 60s
+      conditions:
+        - "[STATUS] == 200"
+      alerts:
+        - type: slack
+          enabled: false
+          failure-threshold: 3
+          success-threshold: 2
+          send-on-resolved: true
+
+  # ============================================
+  # DYNAMIC ENDPOINTS CONFIGURATION
+  # Add as many domains/endpoints as you want!
+  # ============================================
+  endpoints:
+    # Example Website Monitoring
+    - name: "Google"
+      group: "External Services"
+      url: "https://www.google.com"
+      interval: 60s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+
+    - name: "GitHub"
+      group: "External Services"
+      url: "https://github.com"
+      interval: 60s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 2000"
+
+    # Add your own domains below - examples:
+    # - name: "My Website"
+    #   group: "Production"
+    #   url: "https://mywebsite.com"
+    #   interval: 30s
+    #   conditions:
+    #     - "[STATUS] == 200"
+    #     - "[RESPONSE_TIME] < 500"
+    #     - "[BODY].status == 'ok'"  # Optional JSON body check
+
+    # - name: "API Endpoint"
+    #   group: "Production"
+    #   url: "https://api.mywebsite.com/health"
+    #   interval: 30s
+    #   method: GET
+    #   conditions:
+    #     - "[STATUS] == 200"
+    #     - "[RESPONSE_TIME] < 300"
+
+    # - name: "Database Health"
+    #   group: "Infrastructure"
+    #   url: "tcp://db.internal:5432"
+    #   interval: 60s
+    #   conditions:
+    #     - "[CONNECTED] == true"
+
+    # - name: "Redis Cache"
+    #   group: "Infrastructure"
+    #   url: "tcp://redis.internal:6379"
+    #   interval: 60s
+    #   conditions:
+    #     - "[CONNECTED] == true"
+
+    # DNS check example
+    # - name: "DNS Resolution"
+    #   group: "DNS"
+    #   url: "dns://8.8.8.8"
+    #   interval: 60s
+    #   dns:
+    #     query-name: "example.com"
+    #     query-type: "A"
+    #   conditions:
+    #     - "[DNS_RCODE] == NOERROR"
+
+    # ICMP Ping example (requires elevated permissions)
+    # - name: "Server Ping"
+    #   group: "Infrastructure"
+    #   url: "icmp://server.internal"
+    #   interval: 60s
+    #   conditions:
+    #     - "[CONNECTED] == true"
+
+# Extra environment variables
+extraEnvVars:
+  []
+  # - name: TZ
+  #   value: "UTC"
+
+# Extra volumes
+extraVolumes: []
+
+# Extra volume mounts
+extraVolumeMounts: []

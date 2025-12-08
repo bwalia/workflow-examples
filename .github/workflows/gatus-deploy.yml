@@ -1,0 +1,117 @@
+name: Deploy Gatus to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "helm/gatus/**"
+      - ".github/workflows/gatus-deploy.yml"
+
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: "Kubernetes namespace for deployment"
+        default: "monitoring"
+        required: false
+      release_name:
+        description: "Helm release name"
+        default: "gatus"
+        required: false
+
+env:
+  HELM_RELEASE_NAME: ${{ github.event.inputs.release_name || 'gatus' }}
+  NAMESPACE: ${{ github.event.inputs.namespace || 'monitoring' }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+  CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+
+jobs:
+  deploy:
+    name: Deploy Gatus to K3s
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: "v3.13.0"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.28.0"
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_K3S0 }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Verify cluster connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Lint Helm chart
+        run: |
+          helm lint ./helm/gatus
+
+      - name: Deploy Gatus with Helm
+        run: |
+          helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./helm/gatus \
+            --namespace ${{ env.NAMESPACE }} \
+            --values ./helm/gatus/values.yaml \
+            --wait \
+            --timeout 5m \
+            --atomic
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ env.HELM_RELEASE_NAME }} -n ${{ env.NAMESPACE }}
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=gatus
+          kubectl get svc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=gatus
+          kubectl get ingress -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=gatus
+
+      - name: Display deployment info
+        run: |
+          echo "=== Gatus Deployment Summary ==="
+          echo "Namespace: ${{ env.NAMESPACE }}"
+          echo "Release Name: ${{ env.HELM_RELEASE_NAME }}"
+          echo ""
+          echo "=== Pods ==="
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=gatus -o wide
+          echo ""
+          echo "=== Services ==="
+          kubectl get svc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=gatus
+          echo ""
+          echo "=== Ingress ==="
+          kubectl get ingress -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=gatus
+
+      - name: Clear Cloudflare Cache
+        run: |
+          curl https://api.cloudflare.com/client/v4/zones/${{ env.ZONE_ID }}/purge_cache \
+              -H 'Content-Type: application/json' \
+              -H "X-Auth-Email: ${{ env.CLOUDFLARE_EMAIL }}" \
+              -H "X-Auth-Key: ${{ env.CLOUDFLARE_API_TOKEN }}" \
+              -d '{"purge_everything": true}'
+
+      - name: Slack Notification on Deployment
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_CHANNEL: github-updates
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_ICON: https://github.com/rtCamp.png?size=48
+          SLACK_MESSAGE: "Gatus has been successfully deployed/updated in the Kubernetes cluster. Check the deployment details https://status.workstation.co.uk"
+          SLACK_TITLE: Gatus Deployment Notification
+          SLACK_USERNAME: rtCamp
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
