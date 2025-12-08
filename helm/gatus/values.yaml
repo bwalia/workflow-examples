@@ -45,14 +45,14 @@ ingress:
     # For nginx (uncomment if using nginx)
     # nginx.ingress.kubernetes.io/ssl-redirect: "true"
   hosts:
-    - host: status.workstation.co.uk
+    - host: test-status.workstation.co.uk
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: gatus-tls
       hosts:
-        - status.workstation.co.uk
+        - test-status.workstation.co.uk
 
 resources:
   limits:
