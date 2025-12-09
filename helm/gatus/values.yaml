@@ -155,15 +155,15 @@ gatus:
         - "[STATUS] == 200"
         - "[RESPONSE_TIME] < 2000"
 
-    # Add your own domains below - examples:
-    # - name: "My Website"
-    #   group: "Production"
-    #   url: "https://mywebsite.com"
-    #   interval: 30s
-    #   conditions:
-    #     - "[STATUS] == 200"
-    #     - "[RESPONSE_TIME] < 500"
-    #     - "[BODY].status == 'ok'"  # Optional JSON body check
+    # https://dev.wslcrm.com/:
+    - name: "WSL CRM (Dev)"
+      group: "dev"
+      url: "https://dev.wslcrm.com"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 500"
+        - "[BODY].status == 'ok'"  # Optional JSON body check
 
     # - name: "API Endpoint"
     #   group: "Production"
