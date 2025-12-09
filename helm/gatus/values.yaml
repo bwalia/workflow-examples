@@ -163,7 +163,6 @@ gatus:
       conditions:
         - "[STATUS] == 200"
         - "[RESPONSE_TIME] < 500"
-        - "[BODY].status == 'ok'"  # Optional JSON body check
 
     # - name: "API Endpoint"
     #   group: "Production"
