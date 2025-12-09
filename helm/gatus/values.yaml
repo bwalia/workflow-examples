@@ -157,54 +157,265 @@ gatus:
 
     # https://dev.wslcrm.com/:
     - name: "WSL CRM (Dev)"
-      group: "dev"
+      group: "Dev"
       url: "https://dev.wslcrm.com"
       interval: 30s
       conditions:
         - "[STATUS] == 200"
         - "[RESPONSE_TIME] < 2000"
 
-    # - name: "API Endpoint"
-    #   group: "Production"
-    #   url: "https://api.mywebsite.com/health"
-    #   interval: 30s
-    #   method: GET
-    #   conditions:
-    #     - "[STATUS] == 200"
-    #     - "[RESPONSE_TIME] < 300"
+    - name: "Nexus [Prod]"
+      group: "Internal Services"
+      url: "https://nexus.workstation.co.uk/service/rest/v1/status/check"
+      interval: 300s
+      conditions:
+        - "[STATUS] == 403"
+        - "[RESPONSE_TIME] < 1000"
+    - name: "Nexus Cert Expiry [Prod]"
+      group: "Prod"
+      url: "https://nexus.workstation.co.uk"
+      interval: 300s
+      conditions:
+        - "[CERTIFICATE_EXPIRATION] > 432000" # 5 days
+        - "[STATUS] == 200"
 
-    # - name: "Database Health"
-    #   group: "Infrastructure"
-    #   url: "tcp://db.internal:5432"
-    #   interval: 60s
-    #   conditions:
-    #     - "[CONNECTED] == true"
+    - name: "ELK Cert Expiry [Prod]"
+      group: "Prod"
+      url: "https://elastic.workstation.co.uk/"
+      interval: 300s
+      conditions:
+        - "[CERTIFICATE_EXPIRATION] > 432000" # 5 days
+        - "[STATUS] == 200"
 
-    # - name: "Redis Cache"
-    #   group: "Infrastructure"
-    #   url: "tcp://redis.internal:6379"
-    #   interval: 60s
-    #   conditions:
-    #     - "[CONNECTED] == true"
+    - name: "ELK [Prod]"
+      group: "Prod"
+      url: "https://elastic.workstation.co.uk/"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
 
-    # DNS check example
-    # - name: "DNS Resolution"
-    #   group: "DNS"
-    #   url: "dns://8.8.8.8"
-    #   interval: 60s
-    #   dns:
-    #     query-name: "example.com"
-    #     query-type: "A"
-    #   conditions:
-    #     - "[DNS_RCODE] == NOERROR"
+    - name: "ELK [Acc]"
+      group: "Acc"
+      url: "https://acc-elastic.workstation.co.uk/"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
 
-    # ICMP Ping example (requires elevated permissions)
-    # - name: "Server Ping"
-    #   group: "Infrastructure"
-    #   url: "icmp://server.internal"
-    #   interval: 60s
-    #   conditions:
-    #     - "[CONNECTED] == true"
+    - name: "ELK [Test]"
+      group: "Test"
+      url: "https://test-elastic.workstation.co.uk/"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "CRM API [Prod]"
+      group: "Prod"
+      url: "https://my.workstation.co.uk/api/v1/ping"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "[BODY].database == Database connection is successful."
+
+    - name: "WSW [Acc]"
+      group: "Acc"
+      url: "https://acc.workstation.co.uk/"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "WSW [Test]"
+      group: "Test"
+      url: "https://test.workstation.co.uk/"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "Kisaan OPSAPI Swagger [Prod]"
+      group: "Prod"
+      url: "https://kisaan.com/swagger"
+      interval: 300s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "Kisaan OPSAPI Swagger [Acc]"
+      group: "Acc"
+      url: "https://acc.kisaan.com/swagger"
+      interval: 300s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "Kisaan OPSAPI Swagger [Test]"
+      group: "Test"
+      url: "https://test.kisaan.com/swagger"
+      interval: 300s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "Kisaan OPSAPI Cert Expiry [Prod]"
+      group: "Prod"
+      url: "https://api.kisaan.com/"
+      interval: 300s
+      conditions:
+        - "[CERTIFICATE_EXPIRATION] > 432000" # 5 days
+        - "[STATUS] == 200"
+
+    - name: "Kisaan OPSAPI Cert Expiry [Acc]"
+      group: "Acc"
+      url: "https://acc-api.kisaan.com/"
+      interval: 300s
+      conditions:
+        - "[CERTIFICATE_EXPIRATION] > 432000" # 5 days
+        - "[STATUS] == 200"
+
+    - name: "Kisaan OPSAPI Cert Expiry [Test]"
+      group: "Test"
+      url: "https://test-api.kisaan.com/"
+      interval: 300s
+      conditions:
+        - "[CERTIFICATE_EXPIRATION] > 432000" # 5 days
+        - "[STATUS] == 200"
+
+    # opsapi-kisaan-svc
+    - name: "Kisaan OpsAPI [Prod]"
+      group: "Prod"
+      url: "http://api.kisaan.com/health"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "[BODY].status == healthy"
+        - "len([BODY]) > 10"
+
+    - name: "Kisaan OpsAPI [Acc]"
+      group: "Acc"
+      url: "http://acc-api.kisaan.com/health"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "[BODY].status == healthy"
+        - "len([BODY]) > 10"
+
+    - name: "Kisaan OpsAPI [Test]"
+      group: "Test"
+      url: "http://test-api.kisaan.com/health"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "[BODY].status == healthy"
+        - "len([BODY]) > 10"
+
+    - name: "WSW OpsAPI [Prod]"
+      group: "Prod"
+      url: "https://api.wslcrm.com/health"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "Kisaan OpsAPI Metrics [Prod]"
+      group: "Prod"
+      url: "https://api.wslcrm.com/metrics"
+      interval: 120s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 2000"
+
+    - name: "Kisaan OpsAPI Metrics [Acc]"
+      group: "Acc"
+      url: "https://acc-api.wslcrm.com/metrics"
+      interval: 120s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 2000"
+
+    - name: "Kisaan OpsAPI Metrics [Dev]"
+      group: "Dev"
+      url: "https://dev-api.wslcrm.com/metrics"
+      interval: 120s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 2000"
+
+    - name: "External NGINX [Dev]"
+      group: "Dev"
+      url: "https://dev-api.wslcrm.com/nginx_status"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "External NGINX [Test]"
+      group: "Test"
+      url: "https://test-api.wslcrm.com/nginx_status"
+      interval: 30s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+        - "len([BODY]) > 10"
+
+    - name: "Ingress NGINX"
+      group: "Kubernetes Infrastructure"
+      url: "http://ingress-nginx-controller-metrics.ingress-nginx.svc.cluster.local:10254/metrics"
+      interval: 60s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1500"
+    - name: "Prometheus"
+      group: "Monitoring Stack"
+      url: "http://kube-prometheus-stack-prometheus.prometheus-operator-system.svc.cluster.local:9090/api/v1/query?query=up"
+      interval: 60s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 2000"
+
+    - name: "Grafana"
+      group: "Monitoring Stack"
+      url: "http://grafana.grafana.svc.cluster.local/api/health"
+      interval: 60s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 2000"
+
+    - name: "Loki"
+      group: "Monitoring Stack"
+      url: "http://loki.loki-stack.svc.cluster.local:3100/ready"
+      interval: 60s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 2000"
+
+    - name: "k3s0-apiserver"
+      group: "Infra"
+      url: "https://k3s0.workstation.co.uk:6443/readyz?verbose"
+      method: GET
+      interval: 300s
+      client:
+        insecure: true
+        timeout: 50s
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 5000"
 
 # Extra environment variables
 extraEnvVars:
