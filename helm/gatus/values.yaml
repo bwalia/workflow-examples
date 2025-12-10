@@ -6,7 +6,7 @@ replicaCount: 2
 image:
   repository: twinproduction/gatus
   pullPolicy: IfNotPresent
-  tag: "v5.11.0"
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
