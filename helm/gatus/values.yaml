@@ -1,7 +1,7 @@
 # Default values for Gatus Helm chart
 # This is a YAML-formatted file.
 
-replicaCount: 2
+replicaCount: 1
 
 image:
   repository: twinproduction/gatus
@@ -83,15 +83,18 @@ affinity:
           topologyKey: kubernetes.io/hostname
 
 # Pod Disruption Budget
+# Disabled for single replica deployment with SQLite storage
 podDisruptionBudget:
-  enabled: true
+  enabled: false
   minAvailable: 1
 
 # Horizontal Pod Autoscaler
+# Disabled because SQLite storage doesn't support multiple pods (ReadWriteOnce PVC)
+# Enable only if using external database (PostgreSQL) with ReadWriteMany storage
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 5
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 80
 

@@ -66,14 +66,22 @@ jobs:
         run: |
           helm lint ./helm/gatus
 
+      - name: Uninstall existing Gatus release
+        run: |
+          # Uninstall existing release if it exists (ignore errors if not found)
+          helm uninstall ${{ env.HELM_RELEASE_NAME }} --namespace ${{ env.NAMESPACE }} --wait || true
+          # Delete any stuck pods to ensure clean state
+          kubectl delete pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=gatus --force --grace-period=0 || true
+          # Wait for pods to be fully terminated
+          sleep 10
+
       - name: Deploy Gatus with Helm
         run: |
-          helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./helm/gatus \
+          helm install ${{ env.HELM_RELEASE_NAME }} ./helm/gatus \
             --namespace ${{ env.NAMESPACE }} \
             --values ./helm/gatus/values.yaml \
             --wait \
-            --timeout 5m \
-            --atomic
+            --timeout 5m
 
       - name: Verify deployment
         run: |
