@@ -5,6 +5,9 @@ metadata:
   name: {{ include "gatus.fullname" . }}-data
   labels:
     {{- include "gatus.labels" . | nindent 4 }}
+  annotations:
+    # Prevent Helm from modifying PVC after creation (PVCs are immutable)
+    "helm.sh/resource-policy": keep
 spec:
   accessModes:
     {{- range .Values.persistence.accessModes }}
