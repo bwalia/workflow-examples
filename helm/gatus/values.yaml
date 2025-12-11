@@ -1,12 +1,12 @@
 # Default values for Gatus Helm chart
 # This is a YAML-formatted file.
 
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: twinproduction/gatus
   pullPolicy: IfNotPresent
-  tag: "v5.11.0"
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -40,10 +40,13 @@ ingress:
   className: "nginx" # Use traefik for k3s, change to nginx if needed
   annotations:
     kubernetes.io/tls-acme: "true"
-    # For traefik
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    # For nginx (uncomment if using nginx)
-    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # For nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/timeout-send: "300"
+    nginx.ingress.kubernetes.io/timeout-read: "300"
+    # For traefik (uncomment if using traefik)
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
   hosts:
     - host: test-status.workstation.co.uk
       paths:
@@ -56,17 +59,41 @@ ingress:
 
 resources:
   limits:
-    cpu: 200m
-    memory: 256Mi
+    cpu: 500m
+    memory: 512Mi
   requests:
-    cpu: 50m
-    memory: 64Mi
+    cpu: 100m
+    memory: 128Mi
 
 nodeSelector: {}
 
 tolerations: []
 
-affinity: {}
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - gatus
+          topologyKey: kubernetes.io/hostname
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
 
 # Persistence for Gatus data
 persistence:
@@ -74,7 +101,7 @@ persistence:
   storageClass: "" # Use default storage class
   accessModes:
     - ReadWriteOnce
-  size: 1Gi
+  size: 5Gi
 
 # Gatus configuration
 # Add your endpoints here - you can add as many domains as you want
@@ -428,3 +455,13 @@ extraVolumes: []
 
 # Extra volume mounts
 extraVolumeMounts: []
+
+# Monitoring and Observability
+monitoring:
+  enabled: true
+  serviceMonitor: false  # Set to true only if prometheus-operator is installed
+  metricsPath: /metrics
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+    # prometheus: kube-prometheus
