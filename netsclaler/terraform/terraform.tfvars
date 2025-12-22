@@ -15,4 +15,4 @@ app2_port = 80
 app3_port = 80
 
 # NetScaler credentials (auto-generated on first start)
-ns_password = "e8d55ea8a55945ac8c1e0c30c509efc8"
+ns_password = "ns-root-password"
