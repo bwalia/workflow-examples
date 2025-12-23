@@ -1,0 +1,261 @@
+name: Deploy NetScaler Load Balancer
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Deployment action"
+        required: true
+        default: "deploy"
+        type: choice
+        options:
+          - deploy
+          - destroy
+          - restart
+
+env:
+  NETSCALER_ENDPOINT: "https://netscaler.fictionally.org"
+  LB_URL: "http://185.237.99.238:9090"
+
+jobs:
+  deploy:
+    name: Deploy NetScaler Infrastructure
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set deployment action
+        id: action
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
+          else
+            echo "action=deploy" >> $GITHUB_OUTPUT
+          fi
+
+      # ============================================
+      # DESTROY (if requested)
+      # ============================================
+      - name: Destroy Infrastructure
+        if: steps.action.outputs.action == 'destroy'
+        working-directory: ./netsclaler/terraform
+        run: |
+          echo "=== Destroying Terraform Resources ==="
+          terraform init -input=false
+          terraform destroy -auto-approve || true
+
+          echo "=== Stopping Docker Containers ==="
+          cd ..
+          docker-compose down --remove-orphans || true
+
+          echo "=== Infrastructure Destroyed ==="
+
+      # ============================================
+      # DEPLOY / RESTART
+      # ============================================
+      - name: Stop existing containers
+        if: steps.action.outputs.action != 'destroy'
+        working-directory: ./netsclaler
+        run: |
+          echo "=== Stopping existing containers ==="
+          docker-compose down --remove-orphans || true
+
+      - name: Start Docker Compose services
+        if: steps.action.outputs.action != 'destroy'
+        working-directory: ./netsclaler
+        run: |
+          echo "=== Starting Docker Compose services ==="
+          docker-compose up -d
+
+          echo "=== Waiting for containers to be ready ==="
+          sleep 10
+
+      - name: Wait for NetScaler to be ready
+        if: steps.action.outputs.action != 'destroy'
+        run: |
+          echo "=== Waiting for NetScaler CPX to start ==="
+          MAX_ATTEMPTS=30
+          ATTEMPT=1
+
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
+
+            # Check if container is running
+            if ! docker ps | grep -q netscaler-cpx; then
+              echo "NetScaler container not running, waiting..."
+              sleep 10
+              ATTEMPT=$((ATTEMPT + 1))
+              continue
+            fi
+
+            # Check if API is responding
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -k ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/nsversion 2>/dev/null || echo "000")
+
+            if [ "$HTTP_CODE" == "401" ] || [ "$HTTP_CODE" == "200" ]; then
+              echo "NetScaler API is responding (HTTP $HTTP_CODE)"
+              break
+            fi
+
+            echo "NetScaler not ready yet (HTTP $HTTP_CODE), waiting..."
+            sleep 10
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+            echo "ERROR: NetScaler failed to start within timeout"
+            docker logs netscaler-cpx --tail 50
+            exit 1
+          fi
+
+          echo "=== NetScaler is ready ==="
+
+      - name: Get NetScaler password
+        if: steps.action.outputs.action != 'destroy'
+        id: ns_password
+        run: |
+          echo "=== Retrieving NetScaler password ==="
+          NS_PASSWORD=$(docker exec netscaler-cpx cat /var/deviceinfo/random_id)
+          echo "::add-mask::$NS_PASSWORD"
+          echo "password=$NS_PASSWORD" >> $GITHUB_OUTPUT
+          echo "Password retrieved successfully"
+
+      - name: Update Terraform variables
+        if: steps.action.outputs.action != 'destroy'
+        run: |
+          echo "=== Updating Terraform variables with current password ==="
+          # Escape special characters in password for sed
+          ESCAPED_PASSWORD=$(printf '%s\n' "${{ steps.ns_password.outputs.password }}" | sed 's/[&/\]/\\&/g')
+          sed -i "s/^ns_password = .*/ns_password = \"${ESCAPED_PASSWORD}\"/" netsclaler/terraform/terraform.tfvars
+
+          # Verify password was updated (without exposing it)
+          if grep -q '^ns_password = ""' netsclaler/terraform/terraform.tfvars; then
+            echo "ERROR: Password was not updated in terraform.tfvars"
+            exit 1
+          fi
+          echo "Terraform variables updated successfully"
+
+      - name: Terraform Init
+        if: steps.action.outputs.action != 'destroy'
+        working-directory: ./netsclaler/terraform
+        run: |
+          echo "=== Initializing Terraform ==="
+          terraform init -input=false
+
+      - name: Terraform Plan
+        if: steps.action.outputs.action != 'destroy'
+        working-directory: ./netsclaler/terraform
+        run: |
+          echo "=== Planning Terraform changes ==="
+          terraform plan -out=tfplan -input=false
+
+      - name: Terraform Apply
+        if: steps.action.outputs.action != 'destroy'
+        working-directory: ./netsclaler/terraform
+        run: |
+          echo "=== Applying Terraform configuration ==="
+          terraform apply -auto-approve tfplan
+
+      - name: Wait for backends to be healthy
+        if: steps.action.outputs.action != 'destroy'
+        run: |
+          echo "=== Waiting for backends to become healthy ==="
+          sleep 15
+
+      - name: Verify deployment
+        if: steps.action.outputs.action != 'destroy'
+        run: |
+          echo "============================================"
+          echo "       DEPLOYMENT VERIFICATION"
+          echo "============================================"
+          echo ""
+
+          # Check container status
+          echo "=== Container Status ==="
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(netscaler|nginx)"
+          echo ""
+
+          # Check container IPs
+          echo "=== Container IPs ==="
+          for container in netscaler-cpx nginx-backend nginx-app1 nginx-app2 nginx-app3 nginx-router; do
+            IP=$(docker inspect $container 2>/dev/null | jq -r '.[0].NetworkSettings.Networks["netsclaler_netscaler-network"].IPAddress' 2>/dev/null || echo "N/A")
+            echo "  $container: $IP"
+          done
+          echo ""
+
+          # Check VIP status
+          echo "=== VIP Status ==="
+          VIP_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_nginx_http | \
+            jq -r '.lbvserver[] | "\(.ipv46):\(.port) - State: \(.curstate) - Effective: \(.effectivestate)"')
+          echo "  $VIP_STATUS"
+          echo ""
+
+          # Check backend status
+          echo "=== Backend Status ==="
+          curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_nginx_apps | \
+            jq -r '.servicegroup_servicegroupmember_binding[] | "  \(.ip):\(.port) - \(.svrstate)"'
+          echo ""
+
+          # Test load balancer
+          echo "=== Load Balancer Test ==="
+          RESPONSE=$(curl -s -m 10 ${{ env.LB_URL }}/ | grep -o "<title>.*</title>" || echo "No response")
+          echo "  Response: $RESPONSE"
+          echo ""
+
+          # Final status check
+          VIP_STATE=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_nginx_http | \
+            jq -r '.lbvserver[].curstate')
+
+          BACKEND_COUNT=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_nginx_apps | \
+            jq -r '[.servicegroup_servicegroupmember_binding[] | select(.svrstate == "UP")] | length')
+
+          echo "============================================"
+          if [ "$VIP_STATE" == "UP" ] && [ "$BACKEND_COUNT" -ge 3 ]; then
+            echo "  DEPLOYMENT SUCCESSFUL!"
+            echo "  VIP: UP"
+            echo "  Healthy Backends: $BACKEND_COUNT/3"
+            echo "  Load Balancer URL: ${{ env.LB_URL }}"
+            echo "  Admin Panel: ${{ env.NETSCALER_ENDPOINT }}"
+          else
+            echo "  DEPLOYMENT WARNING!"
+            echo "  VIP State: $VIP_STATE"
+            echo "  Healthy Backends: $BACKEND_COUNT/3"
+            exit 1
+          fi
+          echo "============================================"
+
+      - name: Output deployment summary
+        if: steps.action.outputs.action != 'destroy' && success()
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "         DEPLOYMENT COMPLETE"
+          echo "=========================================="
+          echo ""
+          echo "Load Balancer URL: ${{ env.LB_URL }}"
+          echo "Admin Panel: ${{ env.NETSCALER_ENDPOINT }}"
+          echo ""
+          echo "Static IPs:"
+          echo "  NetScaler:     172.28.0.10"
+          echo "  nginx-app1:    172.28.0.11"
+          echo "  nginx-app2:    172.28.0.12"
+          echo "  nginx-app3:    172.28.0.13"
+          echo "  nginx-backend: 172.28.0.20"
+          echo "  nginx-router:  172.28.0.100"
+          echo ""
+          echo "Hostname Routing (via nginx-router on port 80):"
+          echo "  netscaler-app-1.workstation.co.uk -> nginx-app1"
+          echo "  netscaler-app-2.workstation.co.uk -> nginx-app2"
+          echo "  netscaler-app-3.workstation.co.uk -> nginx-app3"
+          echo "  * (default) -> NetScaler Load Balancer"
+          echo ""
+          echo "=========================================="
