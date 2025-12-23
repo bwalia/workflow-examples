@@ -117,28 +117,6 @@ services:
       timeout: 10s
       retries: 3
 
-  nginx-router:
-    image: nginx:alpine
-    container_name: nginx-router
-    hostname: nginx-router
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx-router/nginx.conf:/etc/nginx/nginx.conf:ro
-    restart: unless-stopped
-    depends_on:
-      - netscaler-cpx
-      - nginx-app1
-      - nginx-app2
-    networks:
-      netscaler-network:
-        ipv4_address: 172.28.0.100
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   netscaler-exporter:
     image: quay.io/citrix/citrix-observability-exporter:latest
     container_name: netscaler-exporter
