@@ -70,6 +70,8 @@ jobs:
         if: steps.action.outputs.action != 'destroy'
         working-directory: ./netsclaler
         run: |
+          whoami
+          ls -alh
           echo "=== Starting Docker Compose services ==="
           docker-compose up -d
 
