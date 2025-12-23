@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - master
+    paths:
+      - 'netsclaler/**'
+      - '.github/workflows/netscaler-lb-terraform.yaml'
   workflow_dispatch:
     inputs:
       action:
@@ -39,20 +42,23 @@ jobs:
             echo "action=deploy" >> $GITHUB_OUTPUT
           fi
 
+      - name: Make deploy script executable
+        run: chmod +x ./netsclaler/scripts/deploy.sh
+
       # ============================================
       # DESTROY (if requested)
       # ============================================
       - name: Destroy Infrastructure
         if: steps.action.outputs.action == 'destroy'
-        working-directory: ./netsclaler/terraform
         run: |
           echo "=== Destroying Terraform Resources ==="
+          cd netsclaler/terraform
           terraform init -input=false
           terraform destroy -auto-approve || true
 
           echo "=== Stopping Docker Containers ==="
-          cd ..
-          docker-compose down --remove-orphans || true
+          cd ../..
+          ./netsclaler/scripts/deploy.sh destroy
 
           echo "=== Infrastructure Destroyed ==="
 
@@ -61,68 +67,22 @@ jobs:
       # ============================================
       - name: Stop existing containers
         if: steps.action.outputs.action != 'destroy'
-        working-directory: ./netsclaler
-        run: |
-          echo "=== Stopping existing containers ==="
-          docker-compose down --remove-orphans || true
+        run: ./netsclaler/scripts/deploy.sh stop
 
       - name: Start Docker Compose services
         if: steps.action.outputs.action != 'destroy'
-        working-directory: ./netsclaler
-        run: |
-          whoami
-          ls -alh
-          echo "=== Starting Docker Compose services ==="
-          docker-compose up -d
-
-          echo "=== Waiting for containers to be ready ==="
-          sleep 10
+        run: ./netsclaler/scripts/deploy.sh start
 
       - name: Wait for NetScaler to be ready
         if: steps.action.outputs.action != 'destroy'
-        run: |
-          echo "=== Waiting for NetScaler CPX to start ==="
-          MAX_ATTEMPTS=30
-          ATTEMPT=1
-
-          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
-
-            # Check if container is running
-            if ! docker ps | grep -q netscaler-cpx; then
-              echo "NetScaler container not running, waiting..."
-              sleep 10
-              ATTEMPT=$((ATTEMPT + 1))
-              continue
-            fi
-
-            # Check if API is responding
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -k ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/nsversion 2>/dev/null || echo "000")
-
-            if [ "$HTTP_CODE" == "401" ] || [ "$HTTP_CODE" == "200" ]; then
-              echo "NetScaler API is responding (HTTP $HTTP_CODE)"
-              break
-            fi
-
-            echo "NetScaler not ready yet (HTTP $HTTP_CODE), waiting..."
-            sleep 10
-            ATTEMPT=$((ATTEMPT + 1))
-          done
-
-          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
-            echo "ERROR: NetScaler failed to start within timeout"
-            docker logs netscaler-cpx --tail 50
-            exit 1
-          fi
-
-          echo "=== NetScaler is ready ==="
+        run: ./netsclaler/scripts/deploy.sh wait "${{ env.NETSCALER_ENDPOINT }}" 30
 
       - name: Get NetScaler password
         if: steps.action.outputs.action != 'destroy'
         id: ns_password
         run: |
           echo "=== Retrieving NetScaler password ==="
-          NS_PASSWORD=$(docker exec netscaler-cpx cat /var/deviceinfo/random_id)
+          NS_PASSWORD=$(./netsclaler/scripts/deploy.sh password)
           echo "::add-mask::$NS_PASSWORD"
           echo "password=$NS_PASSWORD" >> $GITHUB_OUTPUT
           echo "Password retrieved successfully"
@@ -179,15 +139,12 @@ jobs:
 
           # Check container status
           echo "=== Container Status ==="
-          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(netscaler|nginx)"
+          ./netsclaler/scripts/deploy.sh status
           echo ""
 
           # Check container IPs
           echo "=== Container IPs ==="
-          for container in netscaler-cpx nginx-backend nginx-app1 nginx-app2 nginx-app3 nginx-router; do
-            IP=$(docker inspect $container 2>/dev/null | jq -r '.[0].NetworkSettings.Networks["netsclaler_netscaler-network"].IPAddress' 2>/dev/null || echo "N/A")
-            echo "  $container: $IP"
-          done
+          ./netsclaler/scripts/deploy.sh ips
           echo ""
 
           # Check VIP status
