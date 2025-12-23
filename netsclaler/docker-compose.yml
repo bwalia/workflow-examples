@@ -27,7 +27,9 @@ services:
     volumes:
       - netscaler-logs:/var/log
       - netscaler-config:/var/netscaler
-      - netscaler-nstmp:/var/nstmp
+    # Use tmpfs for /var/nstmp to ensure proper permissions
+    tmpfs:
+      - /var/nstmp:rw,exec,nosuid,size=512m
     restart: unless-stopped
     mem_limit: 2g
     cpus: 1.0
@@ -146,5 +148,4 @@ services:
 volumes:
   netscaler-logs:
   netscaler-config:
-  netscaler-nstmp:
 
