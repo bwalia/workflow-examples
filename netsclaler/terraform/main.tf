@@ -1,15 +1,3 @@
-terraform {
-  required_providers {
-    citrixadc = {
-      source = "citrix/citrixadc"
-    }
-    time = {
-      source  = "hashicorp/time"
-      version = "~> 0.9"
-    }
-  }
-}
-
 provider "citrixadc" {
   endpoint             = var.ns_endpoint
   username             = var.ns_username
