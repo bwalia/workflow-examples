@@ -54,8 +54,14 @@ stop_containers() {
 start_containers() {
     log_info "Starting Docker Compose services..."
     docker_compose_cmd up -d
-    log_info "Waiting for containers to be ready..."
-    sleep 10
+
+    log_info "Waiting for containers to initialize..."
+    sleep 20
+
+    # Show container status
+    log_info "Current container status:"
+    docker_cmd ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(netscaler|nginx|api-app)" || true
+
     log_info "Containers started"
 }
 
@@ -104,17 +110,79 @@ get_password() {
 # Get container status
 get_container_status() {
     log_info "Container Status:"
-    docker_cmd ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(netscaler|nginx)" || true
+    docker_cmd ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(netscaler|nginx|api-app)" || true
 }
 
 # Get container IPs
 get_container_ips() {
     local network="netsclaler_netscaler-network"
     log_info "Container IPs:"
-    for container in netscaler-cpx nginx-backend nginx-app1 nginx-app2 nginx-app3 nginx-router; do
+    # Nginx apps
+    for container in netscaler-cpx nginx-backend nginx-app1 nginx-app2 nginx-app3; do
         IP=$(docker_cmd inspect "$container" 2>/dev/null | jq -r ".[0].NetworkSettings.Networks[\"$network\"].IPAddress" 2>/dev/null || echo "N/A")
         echo "  $container: $IP"
     done
+    # API apps
+    for container in api-app1 api-app2 api-app3; do
+        IP=$(docker_cmd inspect "$container" 2>/dev/null | jq -r ".[0].NetworkSettings.Networks[\"$network\"].IPAddress" 2>/dev/null || echo "N/A")
+        echo "  $container: $IP"
+    done
+}
+
+# Verify all backend containers are healthy
+verify_backends() {
+    local max_attempts="${1:-30}"
+    local attempt=1
+    local all_healthy=false
+
+    log_info "Verifying all backend containers are healthy..."
+
+    # List of required containers
+    local containers="nginx-app1 nginx-app2 nginx-app3 api-app1 api-app2 api-app3"
+
+    while [ $attempt -le $max_attempts ]; do
+        all_healthy=true
+        echo "Attempt $attempt of $max_attempts..."
+
+        for container in $containers; do
+            # Check if container is running
+            if ! docker_cmd ps --format "{{.Names}}" | grep -q "^${container}$"; then
+                log_warn "Container $container is not running"
+                all_healthy=false
+                continue
+            fi
+
+            # Check container health by making HTTP request
+            local ip=$(docker_cmd inspect "$container" 2>/dev/null | jq -r '.[0].NetworkSettings.Networks["netsclaler_netscaler-network"].IPAddress' 2>/dev/null)
+            if [ -z "$ip" ] || [ "$ip" == "null" ]; then
+                log_warn "Cannot get IP for $container"
+                all_healthy=false
+                continue
+            fi
+
+            # Test HTTP connectivity
+            local http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://$ip/" 2>/dev/null || echo "000")
+            if [ "$http_code" == "200" ]; then
+                echo "  $container ($ip): OK"
+            else
+                log_warn "  $container ($ip): HTTP $http_code"
+                all_healthy=false
+            fi
+        done
+
+        if [ "$all_healthy" = true ]; then
+            log_info "All backend containers are healthy!"
+            return 0
+        fi
+
+        log_warn "Not all containers are healthy yet, waiting 10 seconds..."
+        sleep 10
+        attempt=$((attempt + 1))
+    done
+
+    log_error "Not all containers became healthy within timeout"
+    get_container_status
+    return 1
 }
 
 # Show container logs
@@ -146,6 +214,9 @@ case "${1:-help}" in
     wait)
         wait_for_netscaler "$2" "${3:-30}"
         ;;
+    verify)
+        verify_backends "${2:-30}"
+        ;;
     password)
         get_password
         ;;
@@ -171,6 +242,7 @@ case "${1:-help}" in
         echo "  start             Start all containers"
         echo "  restart           Restart all containers"
         echo "  wait <endpoint>   Wait for NetScaler to be ready"
+        echo "  verify [attempts] Verify all backend containers are healthy"
         echo "  password          Get NetScaler password"
         echo "  status            Show container status"
         echo "  ips               Show container IPs"
