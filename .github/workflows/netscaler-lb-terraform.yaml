@@ -6,8 +6,8 @@ on:
       - main
       - master
     paths:
-      - 'netsclaler/**'
-      - '.github/workflows/netscaler-lb-terraform.yaml'
+      - "netsclaler/**"
+      - ".github/workflows/netscaler-lb-terraform.yaml"
   workflow_dispatch:
     inputs:
       action:
@@ -271,21 +271,47 @@ jobs:
 
       - name: Send NetScaler credentials to Slack
         if: steps.action.outputs.action != 'destroy' && success()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_CHANNEL: github-updates
-          SLACK_COLOR: good
-          SLACK_ICON: https://github.com/rtCamp.png?size=48
-          SLACK_TITLE: NetScaler Deployment Complete
-          SLACK_MESSAGE: |
-            *NetScaler Load Balancer Deployed Successfully*
-
-            *Admin Panel:* ${{ env.NETSCALER_ENDPOINT }}
-            *Username:* nsroot
-            *Password:* ${{ steps.ns_password.outputs.password }}
-
-            *Load Balancer URLs:*
-            - Nginx App: ${{ env.LB_URL }}
-            - API Service: http://185.237.99.238:9091
-          SLACK_USERNAME: NetScaler Deploy Bot
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "*NetScaler Deployment Complete*",
+              "attachments": [
+                {
+                  "color": "good",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*NetScaler Load Balancer Deployed Successfully*"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Admin Panel:*\n${{ env.NETSCALER_ENDPOINT }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Username:*\nnsroot"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Password:*\n${{ steps.ns_password.outputs.password }}"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Load Balancer URLs:*\n• Nginx App: ${{ env.LB_URL }}\n• API Service: http://185.237.99.238:9091"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }' \
+            ${{ secrets.SLACK_WEBHOOK }}
