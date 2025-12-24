@@ -41,6 +41,40 @@ variable "app3_port" {
   default     = 80
 }
 
+# API Service Backend IPs
+variable "api_app1_ip" {
+  description = "IP address for api-app1 container"
+  type        = string
+}
+
+variable "api_app2_ip" {
+  description = "IP address for api-app2 container"
+  type        = string
+}
+
+variable "api_app3_ip" {
+  description = "IP address for api-app3 container"
+  type        = string
+}
+
+variable "api_app1_port" {
+  description = "Port for api-app1"
+  type        = number
+  default     = 80
+}
+
+variable "api_app2_port" {
+  description = "Port for api-app2"
+  type        = number
+  default     = 80
+}
+
+variable "api_app3_port" {
+  description = "Port for api-app3"
+  type        = number
+  default     = 80
+}
+
 variable "ns_username" {
   type    = string
   default = "nsroot"

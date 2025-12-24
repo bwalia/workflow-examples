@@ -17,7 +17,8 @@ services:
     ports:
       - "9080:80"       # HTTP VIP
       - "9443:443"      # HTTPS VIP
-      - "9090:9090"     # Custom HTTP port for load balancer
+      - "9090:9090"     # Custom HTTP port for nginx app load balancer
+      - "9091:9091"     # Custom HTTP port for API service load balancer
       - "9022:22"       # SSH
       - "8181:9080"     # Management HTTP
       - "8443:9443"     # Management HTTPS
@@ -113,6 +114,66 @@ services:
     networks:
       netscaler-network:
         ipv4_address: 172.28.0.13
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # API Service - 3 instances load balanced
+  # ============================================
+  api-app1:
+    image: nginx:alpine
+    container_name: api-app1
+    hostname: api-app1
+    ports:
+      - "8091:80"
+    volumes:
+      - ./api-app1/index.html:/usr/share/nginx/html/index.html:ro
+      - ./api-app1/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      netscaler-network:
+        ipv4_address: 172.28.0.21
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-app2:
+    image: nginx:alpine
+    container_name: api-app2
+    hostname: api-app2
+    ports:
+      - "8092:80"
+    volumes:
+      - ./api-app2/index.html:/usr/share/nginx/html/index.html:ro
+      - ./api-app2/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      netscaler-network:
+        ipv4_address: 172.28.0.22
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-app3:
+    image: nginx:alpine
+    container_name: api-app3
+    hostname: api-app3
+    ports:
+      - "8093:80"
+    volumes:
+      - ./api-app3/index.html:/usr/share/nginx/html/index.html:ro
+      - ./api-app3/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      netscaler-network:
+        ipv4_address: 172.28.0.23
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s

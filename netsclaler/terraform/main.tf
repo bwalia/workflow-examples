@@ -63,3 +63,58 @@ resource "citrixadc_lbvserver_servicegroup_binding" "lb_to_sg" {
   name             = citrixadc_lbvserver.nginx_lb_vserver.name
   servicegroupname = citrixadc_servicegroup.nginx_sg.servicegroupname
 }
+
+# ============================================
+# API Service Load Balancer Configuration
+# ============================================
+
+resource "citrixadc_servicegroup" "api_sg" {
+  servicegroupname = "sg_api_apps"
+  servicetype      = "HTTP"
+  usip             = "NO"
+}
+
+resource "citrixadc_servicegroup_servicegroupmember_binding" "api_app1" {
+  servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
+  ip               = var.api_app1_ip
+  port             = var.api_app1_port
+}
+
+resource "citrixadc_servicegroup_servicegroupmember_binding" "api_app2" {
+  servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
+  ip               = var.api_app2_ip
+  port             = var.api_app2_port
+}
+
+resource "citrixadc_servicegroup_servicegroupmember_binding" "api_app3" {
+  servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
+  ip               = var.api_app3_ip
+  port             = var.api_app3_port
+}
+
+resource "citrixadc_lbmonitor" "api_http_monitor" {
+  monitorname = "mon_http_api"
+  type        = "HTTP"
+  interval    = 5
+  retries     = 3
+  httprequest = "GET /"
+}
+
+resource "citrixadc_servicegroup_lbmonitor_binding" "api_sg_monitor_bind" {
+  servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
+  monitorname      = citrixadc_lbmonitor.api_http_monitor.monitorname
+}
+
+resource "citrixadc_lbvserver" "api_lb_vserver" {
+  name        = "lbv_api_http"
+  servicetype = "HTTP"
+  ipv46       = var.ns_vip
+  port        = 9091
+  lbmethod    = "ROUNDROBIN"
+  state       = "ENABLED"
+}
+
+resource "citrixadc_lbvserver_servicegroup_binding" "api_lb_to_sg" {
+  name             = citrixadc_lbvserver.api_lb_vserver.name
+  servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
+}
