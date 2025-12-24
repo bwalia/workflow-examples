@@ -53,7 +53,7 @@ jobs:
         run: |
           echo "=== Destroying Terraform Resources ==="
           cd netsclaler/terraform
-          terraform init -input=false
+          terraform init -input=false -upgrade
           terraform destroy -auto-approve || true
 
           echo "=== Stopping Docker Containers ==="
@@ -121,7 +121,7 @@ jobs:
         working-directory: ./netsclaler/terraform
         run: |
           echo "=== Initializing Terraform ==="
-          terraform init -input=false
+          terraform init -input=false -upgrade
 
       - name: Terraform Plan
         if: steps.action.outputs.action != 'destroy'
