@@ -75,6 +75,40 @@ variable "api_app3_port" {
   default     = 80
 }
 
+# Web App Service Backend IPs
+variable "web_app1_ip" {
+  description = "IP address for web-app1 container"
+  type        = string
+}
+
+variable "web_app2_ip" {
+  description = "IP address for web-app2 container"
+  type        = string
+}
+
+variable "web_app3_ip" {
+  description = "IP address for web-app3 container"
+  type        = string
+}
+
+variable "web_app1_port" {
+  description = "Port for web-app1"
+  type        = number
+  default     = 80
+}
+
+variable "web_app2_port" {
+  description = "Port for web-app2"
+  type        = number
+  default     = 80
+}
+
+variable "web_app3_port" {
+  description = "Port for web-app3"
+  type        = number
+  default     = 80
+}
+
 variable "ns_username" {
   type    = string
   default = "nsroot"

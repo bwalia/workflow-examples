@@ -189,3 +189,97 @@ resource "citrixadc_lbvserver_servicegroup_binding" "api_lb_to_sg" {
     time_sleep.api_sg_ready
   ]
 }
+
+# ============================================
+# Web App Service Load Balancer Configuration
+# ============================================
+
+# Step 1: Create the service group
+resource "citrixadc_servicegroup" "web_sg" {
+  servicegroupname = "sg_web_apps"
+  servicetype      = "HTTP"
+  usip             = "NO"
+}
+
+# Step 2: Create the HTTP monitor for Web App
+resource "citrixadc_lbmonitor" "web_http_monitor" {
+  monitorname = "mon_http_web"
+  type        = "HTTP"
+  interval    = 5
+  retries     = 3
+  httprequest = "GET /"
+}
+
+# Step 3: Bind monitor to service group
+resource "citrixadc_servicegroup_lbmonitor_binding" "web_sg_monitor_bind" {
+  servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
+  monitorname      = citrixadc_lbmonitor.web_http_monitor.monitorname
+
+  depends_on = [
+    citrixadc_servicegroup.web_sg,
+    citrixadc_lbmonitor.web_http_monitor
+  ]
+}
+
+# Step 4: Add members to service group
+resource "citrixadc_servicegroup_servicegroupmember_binding" "web_app1" {
+  servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
+  ip               = var.web_app1_ip
+  port             = var.web_app1_port
+
+  depends_on = [citrixadc_servicegroup.web_sg]
+}
+
+resource "citrixadc_servicegroup_servicegroupmember_binding" "web_app2" {
+  servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
+  ip               = var.web_app2_ip
+  port             = var.web_app2_port
+
+  depends_on = [citrixadc_servicegroup.web_sg]
+}
+
+resource "citrixadc_servicegroup_servicegroupmember_binding" "web_app3" {
+  servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
+  ip               = var.web_app3_ip
+  port             = var.web_app3_port
+
+  depends_on = [citrixadc_servicegroup.web_sg]
+}
+
+# Step 5: Small delay to ensure servicegroup is fully configured
+resource "time_sleep" "web_sg_ready" {
+  create_duration = "5s"
+
+  depends_on = [
+    citrixadc_servicegroup_servicegroupmember_binding.web_app1,
+    citrixadc_servicegroup_servicegroupmember_binding.web_app2,
+    citrixadc_servicegroup_servicegroupmember_binding.web_app3,
+    citrixadc_servicegroup_lbmonitor_binding.web_sg_monitor_bind
+  ]
+}
+
+# Step 6: Create the LB vserver (wait for API LB to complete first)
+resource "citrixadc_lbvserver" "web_lb_vserver" {
+  name        = "lbv_web_http"
+  servicetype = "HTTP"
+  ipv46       = var.ns_vip
+  port        = 9092
+  lbmethod    = "ROUNDROBIN"
+  state       = "ENABLED"
+
+  depends_on = [
+    time_sleep.web_sg_ready,
+    citrixadc_lbvserver_servicegroup_binding.api_lb_to_sg  # Wait for API LB to complete
+  ]
+}
+
+# Step 7: Bind service group to LB vserver
+resource "citrixadc_lbvserver_servicegroup_binding" "web_lb_to_sg" {
+  name             = citrixadc_lbvserver.web_lb_vserver.name
+  servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
+
+  depends_on = [
+    citrixadc_lbvserver.web_lb_vserver,
+    time_sleep.web_sg_ready
+  ]
+}

@@ -24,5 +24,15 @@ api_app1_port = 80
 api_app2_port = 80
 api_app3_port = 80
 
+# Web App Service Backend IPs - using static container IPs in bridge network
+web_app1_ip = "172.28.0.31"
+web_app2_ip = "172.28.0.32"
+web_app3_ip = "172.28.0.33"
+
+# Web App Service Backend ports
+web_app1_port = 80
+web_app2_port = 80
+web_app3_port = 80
+
 # NetScaler credentials (auto-generated on first start)
 ns_password = ""

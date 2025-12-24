@@ -60,7 +60,7 @@ start_containers() {
 
     # Show container status
     log_info "Current container status:"
-    docker_cmd ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(netscaler|nginx|api-app)" || true
+    docker_cmd ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(netscaler|nginx|api-app|web-app)" || true
 
     log_info "Containers started"
 }
@@ -110,7 +110,7 @@ get_password() {
 # Get container status
 get_container_status() {
     log_info "Container Status:"
-    docker_cmd ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(netscaler|nginx|api-app)" || true
+    docker_cmd ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(netscaler|nginx|api-app|web-app)" || true
 }
 
 # Get container IPs
@@ -127,6 +127,11 @@ get_container_ips() {
         IP=$(docker_cmd inspect "$container" 2>/dev/null | jq -r ".[0].NetworkSettings.Networks[\"$network\"].IPAddress" 2>/dev/null || echo "N/A")
         echo "  $container: $IP"
     done
+    # Web apps
+    for container in web-app1 web-app2 web-app3; do
+        IP=$(docker_cmd inspect "$container" 2>/dev/null | jq -r ".[0].NetworkSettings.Networks[\"$network\"].IPAddress" 2>/dev/null || echo "N/A")
+        echo "  $container: $IP"
+    done
 }
 
 # Verify all backend containers are healthy
@@ -138,7 +143,7 @@ verify_backends() {
     log_info "Verifying all backend containers are healthy..."
 
     # List of required containers
-    local containers="nginx-app1 nginx-app2 nginx-app3 api-app1 api-app2 api-app3"
+    local containers="nginx-app1 nginx-app2 nginx-app3 api-app1 api-app2 api-app3 web-app1 web-app2 web-app3"
 
     while [ $attempt -le $max_attempts ]; do
         all_healthy=true

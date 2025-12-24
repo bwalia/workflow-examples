@@ -191,6 +191,21 @@ jobs:
             jq -r '.servicegroup_servicegroupmember_binding[]? | "  \(.ip):\(.port) - \(.svrstate)"' 2>/dev/null || echo "  No backends found"
           echo ""
 
+          # Check Web App Service VIP status
+          echo "=== Web App Service VIP Status ==="
+          WEB_VIP_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_web_http | \
+            jq -r '.lbvserver[] | "\(.ipv46):\(.port) - State: \(.curstate) - Effective: \(.effectivestate)"' 2>/dev/null || echo "N/A")
+          echo "  $WEB_VIP_STATUS"
+          echo ""
+
+          # Check Web App Service backend status
+          echo "=== Web App Service Backend Status ==="
+          curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_web_apps | \
+            jq -r '.servicegroup_servicegroupmember_binding[]? | "  \(.ip):\(.port) - \(.svrstate)"' 2>/dev/null || echo "  No backends found"
+          echo ""
+
           # Test Nginx App load balancer
           echo "=== Nginx App Load Balancer Test (port 9090) ==="
           RESPONSE=$(curl -s -m 10 ${{ env.LB_URL }}/ | grep -o "<title>.*</title>" || echo "No response")
@@ -203,7 +218,13 @@ jobs:
           echo "  Response: $API_RESPONSE"
           echo ""
 
-          # Final status check - check both services
+          # Test Web App Service load balancer
+          echo "=== Web App Service Load Balancer Test (port 9092) ==="
+          WEB_RESPONSE=$(curl -s -m 10 http://185.237.99.238:9092/ | grep -o "<title>.*</title>" || echo "No response")
+          echo "  Response: $WEB_RESPONSE"
+          echo ""
+
+          # Final status check - check all services
           NGINX_VIP_STATE=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
             ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_nginx_http | \
             jq -r '.lbvserver[].curstate' 2>/dev/null || echo "DOWN")
@@ -220,6 +241,14 @@ jobs:
             ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_api_apps | \
             jq -r '[.servicegroup_servicegroupmember_binding[]? | select(.svrstate == "UP")] | length' 2>/dev/null || echo "0")
 
+          WEB_VIP_STATE=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_web_http | \
+            jq -r '.lbvserver[].curstate' 2>/dev/null || echo "DOWN")
+
+          WEB_BACKEND_COUNT=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_web_apps | \
+            jq -r '[.servicegroup_servicegroupmember_binding[]? | select(.svrstate == "UP")] | length' 2>/dev/null || echo "0")
+
           echo "============================================"
           echo "  DEPLOYMENT STATUS"
           echo "============================================"
@@ -229,15 +258,19 @@ jobs:
           echo "  API Service:"
           echo "    VIP State: $API_VIP_STATE"
           echo "    Healthy Backends: $API_BACKEND_COUNT/3"
+          echo "  Web App Service:"
+          echo "    VIP State: $WEB_VIP_STATE"
+          echo "    Healthy Backends: $WEB_BACKEND_COUNT/3"
           echo ""
           echo "  Load Balancer URLs:"
           echo "    Nginx App: ${{ env.LB_URL }}"
           echo "    API Service: http://185.237.99.238:9091"
+          echo "    Web App: http://185.237.99.238:9092"
           echo "  Admin Panel: ${{ env.NETSCALER_ENDPOINT }}"
           echo "============================================"
 
           # Don't fail the workflow, just show status
-          if [ "$NGINX_VIP_STATE" != "UP" ] || [ "$API_VIP_STATE" != "UP" ]; then
+          if [ "$NGINX_VIP_STATE" != "UP" ] || [ "$API_VIP_STATE" != "UP" ] || [ "$WEB_VIP_STATE" != "UP" ]; then
             echo ""
             echo "  WARNING: Some services may not be fully healthy yet."
             echo "  This could be due to health checks still initializing."
@@ -254,6 +287,7 @@ jobs:
           echo "Load Balancer URLs:"
           echo "  Nginx App (port 9090): ${{ env.LB_URL }}"
           echo "  API Service (port 9091): http://185.237.99.238:9091"
+          echo "  Web App (port 9092): http://185.237.99.238:9092"
           echo ""
           echo "Admin Panel: ${{ env.NETSCALER_ENDPOINT }}"
           echo ""
@@ -266,6 +300,9 @@ jobs:
           echo "  api-app1:      172.28.0.21"
           echo "  api-app2:      172.28.0.22"
           echo "  api-app3:      172.28.0.23"
+          echo "  web-app1:      172.28.0.31"
+          echo "  web-app2:      172.28.0.32"
+          echo "  web-app3:      172.28.0.33"
           echo ""
           echo "=========================================="
 
@@ -307,7 +344,7 @@ jobs:
                       "type": "section",
                       "text": {
                         "type": "mrkdwn",
-                        "text": "*Load Balancer URLs:*\n• Nginx App: ${{ env.LB_URL }}\n• API Service: http://185.237.99.238:9091"
+                        "text": "*Load Balancer URLs:*\n• Nginx App: ${{ env.LB_URL }}\n• API Service: http://185.237.99.238:9091\n• Web App: http://185.237.99.238:9092"
                       }
                     }
                   ]
