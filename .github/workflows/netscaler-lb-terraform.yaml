@@ -268,3 +268,24 @@ jobs:
           echo "  api-app3:      172.28.0.23"
           echo ""
           echo "=========================================="
+
+      - name: Send NetScaler credentials to Slack
+        if: steps.action.outputs.action != 'destroy' && success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_CHANNEL: github-updates
+          SLACK_COLOR: good
+          SLACK_ICON: https://github.com/rtCamp.png?size=48
+          SLACK_TITLE: NetScaler Deployment Complete
+          SLACK_MESSAGE: |
+            *NetScaler Load Balancer Deployed Successfully*
+
+            *Admin Panel:* ${{ env.NETSCALER_ENDPOINT }}
+            *Username:* nsroot
+            *Password:* ${{ steps.ns_password.outputs.password }}
+
+            *Load Balancer URLs:*
+            - Nginx App: ${{ env.LB_URL }}
+            - API Service: http://185.237.99.238:9091
+          SLACK_USERNAME: NetScaler Deploy Bot
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
