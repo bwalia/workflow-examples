@@ -8,6 +8,9 @@ on:
     paths:
       - "netsclaler/**"
       - ".github/workflows/netscaler-lb-terraform.yaml"
+  schedule:
+    # Run every day at 4:00 AM UTC
+    - cron: "0 4 * * *"
   workflow_dispatch:
     inputs:
       action:
