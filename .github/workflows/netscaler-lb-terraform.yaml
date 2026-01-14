@@ -25,7 +25,9 @@ on:
 
 env:
   NETSCALER_ENDPOINT: "https://netscaler.fictionally.org"
+  NETSCALER_SECONDARY_ENDPOINT: "https://netscaler-secondary.fictionally.org"
   LB_URL: "http://185.237.99.238:9090"
+  HAPROXY_STATS_URL: "http://185.237.99.238:8404/stats"
 
 jobs:
   deploy:
@@ -76,9 +78,17 @@ jobs:
         if: steps.action.outputs.action != 'destroy'
         run: ./netsclaler/scripts/deploy.sh start
 
-      - name: Wait for NetScaler to be ready
+      - name: Wait for NetScaler instances to be ready (HA)
         if: steps.action.outputs.action != 'destroy'
-        run: ./netsclaler/scripts/deploy.sh wait "${{ env.NETSCALER_ENDPOINT }}" 30
+        run: |
+          echo "=== Waiting for Primary NetScaler ==="
+          ./netsclaler/scripts/deploy.sh wait "${{ env.NETSCALER_ENDPOINT }}" netscaler-cpx 30
+
+          echo "=== Waiting for Secondary NetScaler ==="
+          ./netsclaler/scripts/deploy.sh wait "${{ env.NETSCALER_SECONDARY_ENDPOINT }}" netscaler-cpx-secondary 30
+
+          echo "=== Checking HAProxy Status ==="
+          ./netsclaler/scripts/deploy.sh haproxy
 
       - name: Verify all backend containers are healthy
         if: steps.action.outputs.action != 'destroy'
@@ -94,27 +104,40 @@ jobs:
           echo "=== Container IPs ==="
           ./netsclaler/scripts/deploy.sh ips
 
-      - name: Get NetScaler password
+      - name: Get NetScaler passwords (HA)
         if: steps.action.outputs.action != 'destroy'
         id: ns_password
         run: |
-          echo "=== Retrieving NetScaler password ==="
+          echo "=== Retrieving NetScaler Primary password ==="
           NS_PASSWORD=$(./netsclaler/scripts/deploy.sh password)
           echo "::add-mask::$NS_PASSWORD"
           echo "password=$NS_PASSWORD" >> $GITHUB_OUTPUT
-          echo "Password retrieved successfully"
+          echo "Primary password retrieved successfully"
+
+          echo "=== Retrieving NetScaler Secondary password ==="
+          NS_SECONDARY_PASSWORD=$(./netsclaler/scripts/deploy.sh password-secondary)
+          echo "::add-mask::$NS_SECONDARY_PASSWORD"
+          echo "secondary_password=$NS_SECONDARY_PASSWORD" >> $GITHUB_OUTPUT
+          echo "Secondary password retrieved successfully"
 
       - name: Update Terraform variables
         if: steps.action.outputs.action != 'destroy'
         run: |
-          echo "=== Updating Terraform variables with current password ==="
-          # Escape special characters in password for sed
+          echo "=== Updating Terraform variables with current passwords ==="
+          # Escape special characters in passwords for sed
           ESCAPED_PASSWORD=$(printf '%s\n' "${{ steps.ns_password.outputs.password }}" | sed 's/[&/\]/\\&/g')
-          sed -i "s/^ns_password = .*/ns_password = \"${ESCAPED_PASSWORD}\"/" netsclaler/terraform/terraform.tfvars
+          ESCAPED_SECONDARY_PASSWORD=$(printf '%s\n' "${{ steps.ns_password.outputs.secondary_password }}" | sed 's/[&/\]/\\&/g')
 
-          # Verify password was updated (without exposing it)
+          sed -i "s/^ns_password = .*/ns_password = \"${ESCAPED_PASSWORD}\"/" netsclaler/terraform/terraform.tfvars
+          sed -i "s/^ns_secondary_password = .*/ns_secondary_password = \"${ESCAPED_SECONDARY_PASSWORD}\"/" netsclaler/terraform/terraform.tfvars
+
+          # Verify passwords were updated (without exposing them)
           if grep -q '^ns_password = ""' netsclaler/terraform/terraform.tfvars; then
-            echo "ERROR: Password was not updated in terraform.tfvars"
+            echo "ERROR: Primary password was not updated in terraform.tfvars"
+            exit 1
+          fi
+          if grep -q '^ns_secondary_password = ""' netsclaler/terraform/terraform.tfvars; then
+            echo "ERROR: Secondary password was not updated in terraform.tfvars"
             exit 1
           fi
           echo "Terraform variables updated successfully"
@@ -150,7 +173,7 @@ jobs:
         if: steps.action.outputs.action != 'destroy'
         run: |
           echo "============================================"
-          echo "       DEPLOYMENT VERIFICATION"
+          echo "       DEPLOYMENT VERIFICATION (HA)"
           echo "============================================"
           echo ""
 
@@ -164,49 +187,80 @@ jobs:
           ./netsclaler/scripts/deploy.sh ips
           echo ""
 
-          # Check Nginx App VIP status
-          echo "=== Nginx App VIP Status ==="
+          # Check HAProxy status
+          echo "=== HAProxy Status ==="
+          ./netsclaler/scripts/deploy.sh haproxy
+          echo ""
+
+          echo "============================================"
+          echo "       PRIMARY NETSCALER STATUS"
+          echo "============================================"
+          echo ""
+
+          # Check Nginx App VIP status (Primary)
+          echo "=== Nginx App VIP Status (Primary) ==="
           VIP_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
             ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_nginx_http | \
             jq -r '.lbvserver[] | "\(.ipv46):\(.port) - State: \(.curstate) - Effective: \(.effectivestate)"' 2>/dev/null || echo "N/A")
           echo "  $VIP_STATUS"
           echo ""
 
-          # Check Nginx App backend status
-          echo "=== Nginx App Backend Status ==="
+          # Check Nginx App backend status (Primary)
+          echo "=== Nginx App Backend Status (Primary) ==="
           curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
             ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_nginx_apps | \
             jq -r '.servicegroup_servicegroupmember_binding[]? | "  \(.ip):\(.port) - \(.svrstate)"' 2>/dev/null || echo "  No backends found"
           echo ""
 
-          # Check API Service VIP status
-          echo "=== API Service VIP Status ==="
+          # Check API Service VIP status (Primary)
+          echo "=== API Service VIP Status (Primary) ==="
           API_VIP_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
             ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_api_http | \
             jq -r '.lbvserver[] | "\(.ipv46):\(.port) - State: \(.curstate) - Effective: \(.effectivestate)"' 2>/dev/null || echo "N/A")
           echo "  $API_VIP_STATUS"
           echo ""
 
-          # Check API Service backend status
-          echo "=== API Service Backend Status ==="
-          curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
-            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_api_apps | \
-            jq -r '.servicegroup_servicegroupmember_binding[]? | "  \(.ip):\(.port) - \(.svrstate)"' 2>/dev/null || echo "  No backends found"
-          echo ""
-
-          # Check Web App Service VIP status
-          echo "=== Web App Service VIP Status ==="
+          # Check Web App Service VIP status (Primary)
+          echo "=== Web App Service VIP Status (Primary) ==="
           WEB_VIP_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
             ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_web_http | \
             jq -r '.lbvserver[] | "\(.ipv46):\(.port) - State: \(.curstate) - Effective: \(.effectivestate)"' 2>/dev/null || echo "N/A")
           echo "  $WEB_VIP_STATUS"
           echo ""
 
-          # Check Web App Service backend status
-          echo "=== Web App Service Backend Status ==="
-          curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
-            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_web_apps | \
-            jq -r '.servicegroup_servicegroupmember_binding[]? | "  \(.ip):\(.port) - \(.svrstate)"' 2>/dev/null || echo "  No backends found"
+          echo "============================================"
+          echo "       SECONDARY NETSCALER STATUS"
+          echo "============================================"
+          echo ""
+
+          # Check Nginx App VIP status (Secondary)
+          echo "=== Nginx App VIP Status (Secondary) ==="
+          SEC_VIP_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.secondary_password }} \
+            ${{ env.NETSCALER_SECONDARY_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_nginx_http | \
+            jq -r '.lbvserver[] | "\(.ipv46):\(.port) - State: \(.curstate) - Effective: \(.effectivestate)"' 2>/dev/null || echo "N/A")
+          echo "  $SEC_VIP_STATUS"
+          echo ""
+
+          # Check API Service VIP status (Secondary)
+          echo "=== API Service VIP Status (Secondary) ==="
+          SEC_API_VIP_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.secondary_password }} \
+            ${{ env.NETSCALER_SECONDARY_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_api_http | \
+            jq -r '.lbvserver[] | "\(.ipv46):\(.port) - State: \(.curstate) - Effective: \(.effectivestate)"' 2>/dev/null || echo "N/A")
+          echo "  $SEC_API_VIP_STATUS"
+          echo ""
+
+          # Check Web App Service VIP status (Secondary)
+          echo "=== Web App Service VIP Status (Secondary) ==="
+          SEC_WEB_VIP_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.secondary_password }} \
+            ${{ env.NETSCALER_SECONDARY_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_web_http | \
+            jq -r '.lbvserver[] | "\(.ipv46):\(.port) - State: \(.curstate) - Effective: \(.effectivestate)"' 2>/dev/null || echo "N/A")
+          echo "  $SEC_WEB_VIP_STATUS"
+          echo ""
+
+          # Test load balancers via HAProxy
+          echo "============================================"
+          echo "       LOAD BALANCER TESTS (via HAProxy)"
+          echo "============================================"
           echo ""
 
           # Test Nginx App load balancer
@@ -227,7 +281,7 @@ jobs:
           echo "  Response: $WEB_RESPONSE"
           echo ""
 
-          # Final status check - check all services
+          # Final status check - check all services (Primary)
           NGINX_VIP_STATE=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
             ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_nginx_http | \
             jq -r '.lbvserver[].curstate' 2>/dev/null || echo "DOWN")
@@ -252,30 +306,45 @@ jobs:
             ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/servicegroup_servicegroupmember_binding/sg_web_apps | \
             jq -r '[.servicegroup_servicegroupmember_binding[]? | select(.svrstate == "UP")] | length' 2>/dev/null || echo "0")
 
+          # Final status check - check all services (Secondary)
+          SEC_NGINX_VIP_STATE=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.secondary_password }} \
+            ${{ env.NETSCALER_SECONDARY_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_nginx_http | \
+            jq -r '.lbvserver[].curstate' 2>/dev/null || echo "DOWN")
+
+          SEC_API_VIP_STATE=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.secondary_password }} \
+            ${{ env.NETSCALER_SECONDARY_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_api_http | \
+            jq -r '.lbvserver[].curstate' 2>/dev/null || echo "DOWN")
+
+          SEC_WEB_VIP_STATE=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.secondary_password }} \
+            ${{ env.NETSCALER_SECONDARY_ENDPOINT }}/nitro/v1/config/lbvserver/lbv_web_http | \
+            jq -r '.lbvserver[].curstate' 2>/dev/null || echo "DOWN")
+
           echo "============================================"
-          echo "  DEPLOYMENT STATUS"
+          echo "  DEPLOYMENT STATUS (HA)"
           echo "============================================"
-          echo "  Nginx App Service:"
-          echo "    VIP State: $NGINX_VIP_STATE"
-          echo "    Healthy Backends: $NGINX_BACKEND_COUNT/3"
-          echo "  API Service:"
-          echo "    VIP State: $API_VIP_STATE"
-          echo "    Healthy Backends: $API_BACKEND_COUNT/3"
-          echo "  Web App Service:"
-          echo "    VIP State: $WEB_VIP_STATE"
-          echo "    Healthy Backends: $WEB_BACKEND_COUNT/3"
+          echo "  PRIMARY NETSCALER:"
+          echo "    Nginx App - VIP: $NGINX_VIP_STATE, Backends: $NGINX_BACKEND_COUNT/3"
+          echo "    API Service - VIP: $API_VIP_STATE, Backends: $API_BACKEND_COUNT/3"
+          echo "    Web App - VIP: $WEB_VIP_STATE, Backends: $WEB_BACKEND_COUNT/3"
           echo ""
-          echo "  Load Balancer URLs:"
+          echo "  SECONDARY NETSCALER (Standby):"
+          echo "    Nginx App - VIP: $SEC_NGINX_VIP_STATE"
+          echo "    API Service - VIP: $SEC_API_VIP_STATE"
+          echo "    Web App - VIP: $SEC_WEB_VIP_STATE"
+          echo ""
+          echo "  Load Balancer URLs (via HAProxy):"
           echo "    Nginx App: ${{ env.LB_URL }}"
           echo "    API Service: http://185.237.99.238:9091"
           echo "    Web App: http://185.237.99.238:9092"
-          echo "  Admin Panel: ${{ env.NETSCALER_ENDPOINT }}"
+          echo "  HAProxy Stats: ${{ env.HAPROXY_STATS_URL }} (admin/admin)"
+          echo "  Primary Admin: ${{ env.NETSCALER_ENDPOINT }}"
+          echo "  Secondary Admin: ${{ env.NETSCALER_SECONDARY_ENDPOINT }}"
           echo "============================================"
 
           # Don't fail the workflow, just show status
           if [ "$NGINX_VIP_STATE" != "UP" ] || [ "$API_VIP_STATE" != "UP" ] || [ "$WEB_VIP_STATE" != "UP" ]; then
             echo ""
-            echo "  WARNING: Some services may not be fully healthy yet."
+            echo "  WARNING: Some primary services may not be fully healthy yet."
             echo "  This could be due to health checks still initializing."
           fi
 
@@ -284,28 +353,33 @@ jobs:
         run: |
           echo ""
           echo "=========================================="
-          echo "         DEPLOYMENT COMPLETE"
+          echo "    DEPLOYMENT COMPLETE (HA Mode)"
           echo "=========================================="
           echo ""
-          echo "Load Balancer URLs:"
+          echo "Load Balancer URLs (via HAProxy):"
           echo "  Nginx App (port 9090): ${{ env.LB_URL }}"
           echo "  API Service (port 9091): http://185.237.99.238:9091"
           echo "  Web App (port 9092): http://185.237.99.238:9092"
           echo ""
-          echo "Admin Panel: ${{ env.NETSCALER_ENDPOINT }}"
+          echo "Admin Panels:"
+          echo "  Primary:   ${{ env.NETSCALER_ENDPOINT }}"
+          echo "  Secondary: ${{ env.NETSCALER_SECONDARY_ENDPOINT }}"
+          echo "  HAProxy:   ${{ env.HAPROXY_STATS_URL }} (admin/admin)"
           echo ""
           echo "Static IPs:"
-          echo "  NetScaler:     172.28.0.10"
-          echo "  nginx-app1:    172.28.0.11"
-          echo "  nginx-app2:    172.28.0.12"
-          echo "  nginx-app3:    172.28.0.13"
-          echo "  nginx-backend: 172.28.0.20"
-          echo "  api-app1:      172.28.0.21"
-          echo "  api-app2:      172.28.0.22"
-          echo "  api-app3:      172.28.0.23"
-          echo "  web-app1:      172.28.0.31"
-          echo "  web-app2:      172.28.0.32"
-          echo "  web-app3:      172.28.0.33"
+          echo "  HAProxy:              172.28.0.5"
+          echo "  NetScaler Primary:    172.28.0.10"
+          echo "  NetScaler Secondary:  172.28.0.15"
+          echo "  nginx-app1:           172.28.0.11"
+          echo "  nginx-app2:           172.28.0.12"
+          echo "  nginx-app3:           172.28.0.13"
+          echo "  nginx-backend:        172.28.0.20"
+          echo "  api-app1:             172.28.0.21"
+          echo "  api-app2:             172.28.0.22"
+          echo "  api-app3:             172.28.0.23"
+          echo "  web-app1:             172.28.0.31"
+          echo "  web-app2:             172.28.0.32"
+          echo "  web-app3:             172.28.0.33"
           echo ""
           echo "=========================================="
 
@@ -314,7 +388,7 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data '{
-              "text": "*NetScaler Deployment Complete*",
+              "text": "*NetScaler HA Deployment Complete*",
               "attachments": [
                 {
                   "color": "good",
@@ -323,31 +397,35 @@ jobs:
                       "type": "section",
                       "text": {
                         "type": "mrkdwn",
-                        "text": "*NetScaler Load Balancer Deployed Successfully*"
+                        "text": "*NetScaler Load Balancer (HA Mode) Deployed Successfully*"
                       }
-                    },
-                    {
-                      "type": "section",
-                      "fields": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Admin Panel:*\n${{ env.NETSCALER_ENDPOINT }}"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Username:*\nnsroot"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Password:*\n${{ steps.ns_password.outputs.password }}"
-                        }
-                      ]
                     },
                     {
                       "type": "section",
                       "text": {
                         "type": "mrkdwn",
-                        "text": "*Load Balancer URLs:*\n• Nginx App: ${{ env.LB_URL }}\n• API Service: http://185.237.99.238:9091\n• Web App: http://185.237.99.238:9092"
+                        "text": "*Primary NetScaler:*\nAdmin: ${{ env.NETSCALER_ENDPOINT }}\nUsername: nsroot\nPassword: ${{ steps.ns_password.outputs.password }}"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Secondary NetScaler (Standby):*\nAdmin: ${{ env.NETSCALER_SECONDARY_ENDPOINT }}\nUsername: nsroot\nPassword: ${{ steps.ns_password.outputs.secondary_password }}"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*HAProxy Stats:*\n${{ env.HAPROXY_STATS_URL }}\nCredentials: admin/admin"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Load Balancer URLs (via HAProxy):*\n• Nginx App: ${{ env.LB_URL }}\n• API Service: http://185.237.99.238:9091\n• Web App: http://185.237.99.238:9092"
                       }
                     }
                   ]

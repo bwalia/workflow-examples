@@ -60,7 +60,7 @@ start_containers() {
 
     # Show container status
     log_info "Current container status:"
-    docker_cmd ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(netscaler|nginx|api-app|web-app)" || true
+    docker_cmd ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(netscaler|nginx|api-app|web-app|haproxy)" || true
 
     log_info "Containers started"
 }
@@ -68,17 +68,18 @@ start_containers() {
 # Wait for NetScaler to be ready
 wait_for_netscaler() {
     local endpoint="$1"
-    local max_attempts="${2:-30}"
+    local container_name="${2:-netscaler-cpx}"
+    local max_attempts="${3:-30}"
     local attempt=1
 
-    log_info "Waiting for NetScaler CPX to start..."
+    log_info "Waiting for NetScaler CPX ($container_name) to start..."
 
     while [ $attempt -le $max_attempts ]; do
         echo "Attempt $attempt of $max_attempts..."
 
         # Check if container is running
-        if ! docker_cmd ps | grep -q netscaler-cpx; then
-            log_warn "NetScaler container not running, waiting..."
+        if ! docker_cmd ps | grep -q "$container_name"; then
+            log_warn "NetScaler container ($container_name) not running, waiting..."
             sleep 10
             attempt=$((attempt + 1))
             continue
@@ -88,37 +89,79 @@ wait_for_netscaler() {
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -k "$endpoint/nitro/v1/config/nsversion" 2>/dev/null || echo "000")
 
         if [ "$HTTP_CODE" == "401" ] || [ "$HTTP_CODE" == "200" ]; then
-            log_info "NetScaler API is responding (HTTP $HTTP_CODE)"
+            log_info "NetScaler API ($container_name) is responding (HTTP $HTTP_CODE)"
             return 0
         fi
 
-        log_warn "NetScaler not ready yet (HTTP $HTTP_CODE), waiting..."
+        log_warn "NetScaler ($container_name) not ready yet (HTTP $HTTP_CODE), waiting..."
         sleep 10
         attempt=$((attempt + 1))
     done
 
-    log_error "NetScaler failed to start within timeout"
-    docker_cmd logs netscaler-cpx --tail 50
+    log_error "NetScaler ($container_name) failed to start within timeout"
+    docker_cmd logs "$container_name" --tail 50
     return 1
 }
 
-# Get NetScaler password
+# Wait for both NetScalers to be ready (HA setup)
+wait_for_netscalers() {
+    local primary_endpoint="$1"
+    local secondary_endpoint="$2"
+    local max_attempts="${3:-30}"
+
+    log_info "Waiting for both NetScaler instances to be ready..."
+
+    wait_for_netscaler "$primary_endpoint" "netscaler-cpx" "$max_attempts"
+    local primary_result=$?
+
+    wait_for_netscaler "$secondary_endpoint" "netscaler-cpx-secondary" "$max_attempts"
+    local secondary_result=$?
+
+    if [ $primary_result -eq 0 ] && [ $secondary_result -eq 0 ]; then
+        log_info "Both NetScaler instances are ready!"
+        return 0
+    else
+        log_error "One or both NetScaler instances failed to start"
+        return 1
+    fi
+}
+
+# Get NetScaler password (primary)
 get_password() {
     docker_cmd exec netscaler-cpx cat /var/deviceinfo/random_id
+}
+
+# Get NetScaler secondary password
+get_secondary_password() {
+    docker_cmd exec netscaler-cpx-secondary cat /var/deviceinfo/random_id
+}
+
+# Get both NetScaler passwords (HA setup)
+get_passwords() {
+    log_info "NetScaler Primary Password:"
+    get_password
+    echo ""
+    log_info "NetScaler Secondary Password:"
+    get_secondary_password
 }
 
 # Get container status
 get_container_status() {
     log_info "Container Status:"
-    docker_cmd ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(netscaler|nginx|api-app|web-app)" || true
+    docker_cmd ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(netscaler|nginx|api-app|web-app|haproxy)" || true
 }
 
 # Get container IPs
 get_container_ips() {
     local network="netsclaler_netscaler-network"
     log_info "Container IPs:"
+    # HAProxy and NetScaler instances
+    for container in haproxy netscaler-cpx netscaler-cpx-secondary; do
+        IP=$(docker_cmd inspect "$container" 2>/dev/null | jq -r ".[0].NetworkSettings.Networks[\"$network\"].IPAddress" 2>/dev/null || echo "N/A")
+        echo "  $container: $IP"
+    done
     # Nginx apps
-    for container in netscaler-cpx nginx-backend nginx-app1 nginx-app2 nginx-app3; do
+    for container in nginx-backend nginx-app1 nginx-app2 nginx-app3; do
         IP=$(docker_cmd inspect "$container" 2>/dev/null | jq -r ".[0].NetworkSettings.Networks[\"$network\"].IPAddress" 2>/dev/null || echo "N/A")
         echo "  $container: $IP"
     done
@@ -204,6 +247,19 @@ destroy() {
     log_info "Infrastructure destroyed"
 }
 
+# Check HAProxy status
+check_haproxy() {
+    log_info "Checking HAProxy status..."
+    local stats_url="http://localhost:8404/stats"
+
+    if curl -s -o /dev/null -w "%{http_code}" "$stats_url" 2>/dev/null | grep -q "200\|401"; then
+        log_info "HAProxy is running. Stats available at: $stats_url"
+        log_info "Credentials: admin/admin"
+    else
+        log_warn "HAProxy stats page not accessible"
+    fi
+}
+
 # Main command handler
 case "${1:-help}" in
     stop)
@@ -217,13 +273,22 @@ case "${1:-help}" in
         start_containers
         ;;
     wait)
-        wait_for_netscaler "$2" "${3:-30}"
+        wait_for_netscaler "$2" "${3:-netscaler-cpx}" "${4:-30}"
+        ;;
+    wait-ha)
+        wait_for_netscalers "$2" "$3" "${4:-30}"
         ;;
     verify)
         verify_backends "${2:-30}"
         ;;
     password)
         get_password
+        ;;
+    password-secondary)
+        get_secondary_password
+        ;;
+    passwords)
+        get_passwords
         ;;
     status)
         get_container_status
@@ -234,25 +299,32 @@ case "${1:-help}" in
     logs)
         show_logs "${2:-netscaler-cpx}" "${3:-50}"
         ;;
+    haproxy)
+        check_haproxy
+        ;;
     destroy)
         destroy
         ;;
     help|*)
-        echo "NetScaler Deployment Script"
+        echo "NetScaler Deployment Script (with HA Support)"
         echo ""
         echo "Usage: $0 <command> [options]"
         echo ""
         echo "Commands:"
-        echo "  stop              Stop all containers"
-        echo "  start             Start all containers"
-        echo "  restart           Restart all containers"
-        echo "  wait <endpoint>   Wait for NetScaler to be ready"
-        echo "  verify [attempts] Verify all backend containers are healthy"
-        echo "  password          Get NetScaler password"
-        echo "  status            Show container status"
-        echo "  ips               Show container IPs"
-        echo "  logs [container]  Show container logs"
-        echo "  destroy           Destroy infrastructure"
-        echo "  help              Show this help"
+        echo "  stop                        Stop all containers"
+        echo "  start                       Start all containers"
+        echo "  restart                     Restart all containers"
+        echo "  wait <endpoint> [container] Wait for NetScaler to be ready"
+        echo "  wait-ha <primary> <secondary> Wait for both NetScalers (HA)"
+        echo "  verify [attempts]           Verify all backend containers are healthy"
+        echo "  password                    Get NetScaler primary password"
+        echo "  password-secondary          Get NetScaler secondary password"
+        echo "  passwords                   Get both NetScaler passwords"
+        echo "  status                      Show container status"
+        echo "  ips                         Show container IPs"
+        echo "  logs [container]            Show container logs"
+        echo "  haproxy                     Check HAProxy status"
+        echo "  destroy                     Destroy infrastructure"
+        echo "  help                        Show this help"
         ;;
 esac

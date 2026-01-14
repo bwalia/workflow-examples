@@ -1,10 +1,31 @@
+# ============================================
+# NetScaler Primary Configuration
+# ============================================
 variable "ns_endpoint" {
-  description = "NetScaler API endpoint URL"
+  description = "NetScaler Primary API endpoint URL"
   type        = string
 }
 
 variable "ns_vip" {
-  description = "Virtual IP address for load balancer (must be valid IP)"
+  description = "Virtual IP address for Primary load balancer (must be valid IP)"
+  type        = string
+}
+
+# ============================================
+# NetScaler Secondary Configuration (HA)
+# ============================================
+variable "ns_secondary_endpoint" {
+  description = "NetScaler Secondary API endpoint URL"
+  type        = string
+}
+
+variable "ns_secondary_vip" {
+  description = "Virtual IP address for Secondary load balancer (must be valid IP)"
+  type        = string
+}
+
+variable "ns_secondary_password" {
+  description = "NetScaler Secondary password"
   type        = string
 }
 

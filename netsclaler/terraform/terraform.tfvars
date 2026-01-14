@@ -1,8 +1,20 @@
-# NetScaler API endpoint - use the domain that works
+# ============================================
+# NetScaler Primary Configuration
+# ============================================
+# NetScaler Primary API endpoint - use the domain that works
 ns_endpoint = "https://netscaler.fictionally.org"
 
-# Virtual IP address for the load balancer (using NetScaler container static IP)
+# Virtual IP address for Primary load balancer (using NetScaler container static IP)
 ns_vip = "172.28.0.10"
+
+# ============================================
+# NetScaler Secondary Configuration (HA)
+# ============================================
+# NetScaler Secondary API endpoint
+ns_secondary_endpoint = "https://netscaler-secondary.fictionally.org"
+
+# Virtual IP address for Secondary load balancer
+ns_secondary_vip = "172.28.0.15"
 
 # Nginx App Backend IPs - using static container IPs in bridge network
 app1_ip = "172.28.0.11"
@@ -34,5 +46,8 @@ web_app1_port = 80
 web_app2_port = 80
 web_app3_port = 80
 
-# NetScaler credentials (auto-generated on first start)
+# NetScaler Primary credentials (auto-generated on first start)
 ns_password = ""
+
+# NetScaler Secondary credentials (auto-generated on first start)
+ns_secondary_password = ""

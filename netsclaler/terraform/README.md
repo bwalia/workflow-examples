@@ -1,6 +1,57 @@
 # NetScaler Load Balancer - Terraform Configuration
 
-This directory contains Terraform configuration for managing NetScaler CPX load balancer services.
+This directory contains Terraform configuration for managing NetScaler CPX load balancer services with High Availability (HA) support.
+
+## Architecture Overview
+
+```
+                    +------------------+
+                    |    HAProxy       |
+                    |   (172.28.0.5)   |
+                    |  Ports: 9090,    |
+                    |  9091, 9092      |
+                    +--------+---------+
+                             |
+            +----------------+----------------+
+            |                                 |
+   +--------v--------+              +---------v--------+
+   | NetScaler       |              | NetScaler        |
+   | Primary         |              | Secondary        |
+   | (172.28.0.10)   |              | (172.28.0.15)    |
+   | Active          |              | Standby          |
+   +--------+--------+              +---------+--------+
+            |                                 |
+            +----------------+----------------+
+                             |
+    +------------------------+------------------------+
+    |                        |                        |
++---v----+              +----v---+              +-----v----+
+| nginx  |              |  api   |              |   web    |
+| apps   |              |  apps  |              |   apps   |
++--------+              +--------+              +----------+
+```
+
+## High Availability (HA) Setup
+
+The infrastructure includes:
+
+- **HAProxy**: Front-end load balancer that routes traffic to the active NetScaler
+- **NetScaler Primary**: Main load balancer handling all traffic
+- **NetScaler Secondary**: Standby instance that takes over if primary fails
+
+### Failover Mechanism
+
+1. HAProxy performs health checks on both NetScaler instances every 5 seconds
+2. Primary NetScaler is preferred (higher weight, not marked as backup)
+3. If primary fails 3 consecutive health checks, traffic automatically routes to secondary
+4. When primary recovers, traffic automatically routes back to primary
+
+### HAProxy Stats Dashboard
+
+Access the HAProxy statistics page at:
+- URL: `http://<server-ip>:8404/stats`
+- Username: `admin`
+- Password: `admin`
 
 ## Current Services
 
@@ -322,8 +373,10 @@ Current IP allocation in the 172.28.0.0/16 network:
 | IP Range | Purpose |
 |----------|---------|
 | 172.28.0.1 | Gateway |
-| 172.28.0.10 | NetScaler CPX |
+| 172.28.0.5 | HAProxy (HA failover) |
+| 172.28.0.10 | NetScaler CPX Primary |
 | 172.28.0.11-13 | nginx-app1, nginx-app2, nginx-app3 |
+| 172.28.0.15 | NetScaler CPX Secondary (Standby) |
 | 172.28.0.20 | nginx-backend |
 | 172.28.0.21-23 | api-app1, api-app2, api-app3 |
 | 172.28.0.30 | netscaler-exporter |
@@ -334,10 +387,23 @@ Current IP allocation in the 172.28.0.0/16 network:
 
 | Port | Service |
 |------|---------|
-| 9090 | Nginx App LB |
-| 9091 | API Service LB |
-| 9092 | Web App LB |
+| 8404 | HAProxy Stats Dashboard |
+| 9090 | Nginx App LB (via HAProxy) |
+| 9091 | API Service LB (via HAProxy) |
+| 9092 | Web App LB (via HAProxy) |
+| 8181 | NetScaler Primary Management HTTP |
+| 8182 | NetScaler Secondary Management HTTP |
 | 9093+ | Available for new services |
+
+## Terraform Files Structure
+
+| File | Purpose |
+|------|---------|
+| `main.tf` | Primary NetScaler resources (service groups, monitors, lbvservers) |
+| `secondary.tf` | Secondary NetScaler resources (mirrors primary for HA) |
+| `variables.tf` | Variable definitions for both NetScaler instances |
+| `terraform.tfvars` | Variable values (IPs, ports, passwords) |
+| `provider.tf` | Provider configuration with primary/secondary aliases |
 
 ## Terraform Resource Dependency Chain
 
@@ -375,3 +441,83 @@ This usually means backends are not reachable. Verify:
 1. Container network connectivity
 2. Port 80 is exposed on containers
 3. nginx.conf is properly mounted
+
+## Testing HA Failover
+
+To test the High Availability failover:
+
+### 1. Verify Both NetScalers Are Running
+
+```bash
+./scripts/deploy.sh status
+```
+
+### 2. Check HAProxy Stats
+
+Open `http://<server-ip>:8404/stats` in a browser (admin/admin).
+You should see:
+- Primary NetScaler: green (UP)
+- Secondary NetScaler: blue (UP, backup)
+
+### 3. Test Traffic Flow
+
+```bash
+# Make requests and observe which backend responds
+for i in {1..10}; do curl -s http://<server-ip>:9090/ | grep -o "<title>.*</title>"; done
+```
+
+### 4. Simulate Primary Failure
+
+```bash
+# Stop primary NetScaler
+docker stop netscaler-cpx
+
+# Wait a few seconds for HAProxy to detect failure
+sleep 10
+
+# Check HAProxy stats - secondary should now be active
+# Make requests - should still work via secondary
+for i in {1..5}; do curl -s http://<server-ip>:9090/ | grep -o "<title>.*</title>"; done
+```
+
+### 5. Verify Automatic Recovery
+
+```bash
+# Start primary NetScaler
+docker start netscaler-cpx
+
+# Wait for it to become healthy
+sleep 30
+
+# Check HAProxy stats - primary should be active again
+# Traffic should automatically route back to primary
+```
+
+### 6. Deploy Script Commands
+
+```bash
+# Get passwords for both NetScalers
+./scripts/deploy.sh passwords
+
+# Check HAProxy status
+./scripts/deploy.sh haproxy
+
+# Wait for both NetScalers to be ready
+./scripts/deploy.sh wait-ha <primary-endpoint> <secondary-endpoint>
+```
+
+## Manual HA Configuration
+
+If you need to manually configure the secondary NetScaler or make changes:
+
+### Primary NetScaler
+
+- Management: `https://netscaler.fictionally.org` or `http://localhost:8181`
+- Username: `nsroot`
+- Password: `./scripts/deploy.sh password`
+
+### Secondary NetScaler
+
+- Management: `https://netscaler-secondary.fictionally.org` or `http://localhost:8182`
+- Username: `nsroot`
+- Password: `./scripts/deploy.sh password-secondary`

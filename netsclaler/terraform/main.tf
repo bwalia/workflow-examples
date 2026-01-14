@@ -1,7 +1,22 @@
+# ============================================
+# NetScaler Primary Provider
+# ============================================
 provider "citrixadc" {
+  alias                = "primary"
   endpoint             = var.ns_endpoint
   username             = var.ns_username
   password             = var.ns_password
+  insecure_skip_verify = true
+}
+
+# ============================================
+# NetScaler Secondary Provider (HA)
+# ============================================
+provider "citrixadc" {
+  alias                = "secondary"
+  endpoint             = var.ns_secondary_endpoint
+  username             = var.ns_username
+  password             = var.ns_secondary_password
   insecure_skip_verify = true
 }
 
@@ -11,6 +26,7 @@ provider "citrixadc" {
 
 # Step 1: Create the service group
 resource "citrixadc_servicegroup" "nginx_sg" {
+  provider         = citrixadc.primary
   servicegroupname = "sg_nginx_apps"
   servicetype      = "HTTP"
   usip             = "NO"
@@ -18,6 +34,7 @@ resource "citrixadc_servicegroup" "nginx_sg" {
 
 # Step 2: Create the HTTP monitor
 resource "citrixadc_lbmonitor" "http_monitor" {
+  provider    = citrixadc.primary
   monitorname = "mon_http_nginx"
   type        = "HTTP"
   interval    = 5
@@ -27,6 +44,7 @@ resource "citrixadc_lbmonitor" "http_monitor" {
 
 # Step 3: Bind monitor to service group (must wait for both to exist)
 resource "citrixadc_servicegroup_lbmonitor_binding" "sg_monitor_bind" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.nginx_sg.servicegroupname
   monitorname      = citrixadc_lbmonitor.http_monitor.monitorname
 
@@ -38,6 +56,7 @@ resource "citrixadc_servicegroup_lbmonitor_binding" "sg_monitor_bind" {
 
 # Step 4: Add members to service group (must wait for servicegroup)
 resource "citrixadc_servicegroup_servicegroupmember_binding" "app1" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.nginx_sg.servicegroupname
   ip               = var.app1_ip
   port             = var.app1_port
@@ -46,6 +65,7 @@ resource "citrixadc_servicegroup_servicegroupmember_binding" "app1" {
 }
 
 resource "citrixadc_servicegroup_servicegroupmember_binding" "app2" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.nginx_sg.servicegroupname
   ip               = var.app2_ip
   port             = var.app2_port
@@ -54,6 +74,7 @@ resource "citrixadc_servicegroup_servicegroupmember_binding" "app2" {
 }
 
 resource "citrixadc_servicegroup_servicegroupmember_binding" "app3" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.nginx_sg.servicegroupname
   ip               = var.app3_ip
   port             = var.app3_port
@@ -75,6 +96,7 @@ resource "time_sleep" "nginx_sg_ready" {
 
 # Step 6: Create the LB vserver
 resource "citrixadc_lbvserver" "nginx_lb_vserver" {
+  provider    = citrixadc.primary
   name        = "lbv_nginx_http"
   servicetype = "HTTP"
   ipv46       = var.ns_vip
@@ -87,6 +109,7 @@ resource "citrixadc_lbvserver" "nginx_lb_vserver" {
 
 # Step 7: Bind service group to LB vserver
 resource "citrixadc_lbvserver_servicegroup_binding" "lb_to_sg" {
+  provider         = citrixadc.primary
   name             = citrixadc_lbvserver.nginx_lb_vserver.name
   servicegroupname = citrixadc_servicegroup.nginx_sg.servicegroupname
 
@@ -102,6 +125,7 @@ resource "citrixadc_lbvserver_servicegroup_binding" "lb_to_sg" {
 
 # Step 1: Create the service group
 resource "citrixadc_servicegroup" "api_sg" {
+  provider         = citrixadc.primary
   servicegroupname = "sg_api_apps"
   servicetype      = "HTTP"
   usip             = "NO"
@@ -109,6 +133,7 @@ resource "citrixadc_servicegroup" "api_sg" {
 
 # Step 2: Create the HTTP monitor for API
 resource "citrixadc_lbmonitor" "api_http_monitor" {
+  provider    = citrixadc.primary
   monitorname = "mon_http_api"
   type        = "HTTP"
   interval    = 5
@@ -118,6 +143,7 @@ resource "citrixadc_lbmonitor" "api_http_monitor" {
 
 # Step 3: Bind monitor to service group
 resource "citrixadc_servicegroup_lbmonitor_binding" "api_sg_monitor_bind" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
   monitorname      = citrixadc_lbmonitor.api_http_monitor.monitorname
 
@@ -129,6 +155,7 @@ resource "citrixadc_servicegroup_lbmonitor_binding" "api_sg_monitor_bind" {
 
 # Step 4: Add members to service group
 resource "citrixadc_servicegroup_servicegroupmember_binding" "api_app1" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
   ip               = var.api_app1_ip
   port             = var.api_app1_port
@@ -137,6 +164,7 @@ resource "citrixadc_servicegroup_servicegroupmember_binding" "api_app1" {
 }
 
 resource "citrixadc_servicegroup_servicegroupmember_binding" "api_app2" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
   ip               = var.api_app2_ip
   port             = var.api_app2_port
@@ -145,6 +173,7 @@ resource "citrixadc_servicegroup_servicegroupmember_binding" "api_app2" {
 }
 
 resource "citrixadc_servicegroup_servicegroupmember_binding" "api_app3" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
   ip               = var.api_app3_ip
   port             = var.api_app3_port
@@ -166,6 +195,7 @@ resource "time_sleep" "api_sg_ready" {
 
 # Step 6: Create the LB vserver (wait for nginx LB to complete first to avoid VIP conflicts)
 resource "citrixadc_lbvserver" "api_lb_vserver" {
+  provider    = citrixadc.primary
   name        = "lbv_api_http"
   servicetype = "HTTP"
   ipv46       = var.ns_vip
@@ -181,6 +211,7 @@ resource "citrixadc_lbvserver" "api_lb_vserver" {
 
 # Step 7: Bind service group to LB vserver
 resource "citrixadc_lbvserver_servicegroup_binding" "api_lb_to_sg" {
+  provider         = citrixadc.primary
   name             = citrixadc_lbvserver.api_lb_vserver.name
   servicegroupname = citrixadc_servicegroup.api_sg.servicegroupname
 
@@ -196,6 +227,7 @@ resource "citrixadc_lbvserver_servicegroup_binding" "api_lb_to_sg" {
 
 # Step 1: Create the service group
 resource "citrixadc_servicegroup" "web_sg" {
+  provider         = citrixadc.primary
   servicegroupname = "sg_web_apps"
   servicetype      = "HTTP"
   usip             = "NO"
@@ -203,6 +235,7 @@ resource "citrixadc_servicegroup" "web_sg" {
 
 # Step 2: Create the HTTP monitor for Web App
 resource "citrixadc_lbmonitor" "web_http_monitor" {
+  provider    = citrixadc.primary
   monitorname = "mon_http_web"
   type        = "HTTP"
   interval    = 5
@@ -212,6 +245,7 @@ resource "citrixadc_lbmonitor" "web_http_monitor" {
 
 # Step 3: Bind monitor to service group
 resource "citrixadc_servicegroup_lbmonitor_binding" "web_sg_monitor_bind" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
   monitorname      = citrixadc_lbmonitor.web_http_monitor.monitorname
 
@@ -223,6 +257,7 @@ resource "citrixadc_servicegroup_lbmonitor_binding" "web_sg_monitor_bind" {
 
 # Step 4: Add members to service group
 resource "citrixadc_servicegroup_servicegroupmember_binding" "web_app1" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
   ip               = var.web_app1_ip
   port             = var.web_app1_port
@@ -231,6 +266,7 @@ resource "citrixadc_servicegroup_servicegroupmember_binding" "web_app1" {
 }
 
 resource "citrixadc_servicegroup_servicegroupmember_binding" "web_app2" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
   ip               = var.web_app2_ip
   port             = var.web_app2_port
@@ -239,6 +275,7 @@ resource "citrixadc_servicegroup_servicegroupmember_binding" "web_app2" {
 }
 
 resource "citrixadc_servicegroup_servicegroupmember_binding" "web_app3" {
+  provider         = citrixadc.primary
   servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
   ip               = var.web_app3_ip
   port             = var.web_app3_port
@@ -260,6 +297,7 @@ resource "time_sleep" "web_sg_ready" {
 
 # Step 6: Create the LB vserver (wait for API LB to complete first)
 resource "citrixadc_lbvserver" "web_lb_vserver" {
+  provider    = citrixadc.primary
   name        = "lbv_web_http"
   servicetype = "HTTP"
   ipv46       = var.ns_vip
@@ -275,6 +313,7 @@ resource "citrixadc_lbvserver" "web_lb_vserver" {
 
 # Step 7: Bind service group to LB vserver
 resource "citrixadc_lbvserver_servicegroup_binding" "web_lb_to_sg" {
+  provider         = citrixadc.primary
   name             = citrixadc_lbvserver.web_lb_vserver.name
   servicegroupname = citrixadc_servicegroup.web_sg.servicegroupname
 

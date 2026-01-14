@@ -9,17 +9,46 @@ networks:
           gateway: 172.28.0.1
 
 services:
+  # ============================================
+  # HAProxy - High Availability Load Balancer
+  # Routes traffic to Primary or Secondary NetScaler
+  # If Primary fails, traffic goes to Secondary
+  # ============================================
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: haproxy
+    hostname: haproxy
+    ports:
+      - "9090:9090"     # Nginx App LB (public facing)
+      - "9091:9091"     # API Service LB (public facing)
+      - "9092:9092"     # Web App LB (public facing)
+      - "8404:8404"     # HAProxy Stats page
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    restart: unless-stopped
+    networks:
+      netscaler-network:
+        ipv4_address: 172.28.0.5
+    healthcheck:
+      test: ["CMD", "haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - netscaler-cpx
+      - netscaler-cpx-secondary
+
+  # ============================================
+  # NetScaler CPX Primary - Main Load Balancer
+  # ============================================
   netscaler-cpx:
     image: quay.io/citrix/citrix-k8s-cpx-ingress:13.0-64.35
     container_name: netscaler-cpx
     hostname: netscaler-cpx
     privileged: true
     ports:
-      - "9080:80"       # HTTP VIP
-      - "9443:443"      # HTTPS VIP
-      - "9090:9090"     # Custom HTTP port for nginx app load balancer
-      - "9091:9091"     # Custom HTTP port for API service load balancer
-      - "9092:9092"     # Custom HTTP port for web app load balancer
+      - "9080:80"       # HTTP VIP (direct access)
+      - "9443:443"      # HTTPS VIP (direct access)
       - "9022:22"       # SSH
       - "8181:9080"     # Management HTTP
       - "8443:9443"     # Management HTTPS
@@ -38,6 +67,43 @@ services:
     networks:
       netscaler-network:
         ipv4_address: 172.28.0.10
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # NetScaler CPX Secondary - Backup Load Balancer
+  # Takes over if Primary fails
+  # ============================================
+  netscaler-cpx-secondary:
+    image: quay.io/citrix/citrix-k8s-cpx-ingress:13.0-64.35
+    container_name: netscaler-cpx-secondary
+    hostname: netscaler-cpx-secondary
+    privileged: true
+    ports:
+      - "9180:80"       # HTTP VIP (direct access - different port)
+      - "9543:443"      # HTTPS VIP (direct access - different port)
+      - "9122:22"       # SSH (different port)
+      - "8182:9080"     # Management HTTP (different port)
+      - "8544:9443"     # Management HTTPS (different port)
+    environment:
+      - EULA=yes
+      - NS_CPX_LICENSE_MODE=CPX_EXPRESS
+    volumes:
+      - netscaler-secondary-logs:/var/log
+      - netscaler-secondary-config:/var/netscaler
+    # Use tmpfs for /var/nstmp to ensure proper permissions
+    tmpfs:
+      - /var/nstmp:rw,exec,nosuid,size=512m
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1.0
+    networks:
+      netscaler-network:
+        ipv4_address: 172.28.0.15
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9080/"]
       interval: 30s
@@ -270,4 +336,6 @@ services:
 volumes:
   netscaler-logs:
   netscaler-config:
+  netscaler-secondary-logs:
+  netscaler-secondary-config:
 
