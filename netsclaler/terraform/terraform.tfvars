@@ -10,8 +10,8 @@ ns_vip = "172.28.0.10"
 # ============================================
 # NetScaler Secondary Configuration (HA)
 # ============================================
-# NetScaler Secondary API endpoint
-ns_secondary_endpoint = "https://netscaler-secondary.fictionally.org"
+# NetScaler Secondary API endpoint (uses localhost since on same host, port 8182 maps to container 9080)
+ns_secondary_endpoint = "http://localhost:8182"
 
 # Virtual IP address for Secondary load balancer
 ns_secondary_vip = "172.28.0.15"

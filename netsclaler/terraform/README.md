@@ -518,6 +518,6 @@ If you need to manually configure the secondary NetScaler or make changes:
 
 ### Secondary NetScaler
 
-- Management: `https://netscaler-secondary.fictionally.org` or `http://localhost:8182`
+- Management: `http://localhost:8182` (on the same host)
 - Username: `nsroot`
 - Password: `./scripts/deploy.sh password-secondary`

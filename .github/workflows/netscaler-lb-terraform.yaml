@@ -25,7 +25,8 @@ on:
 
 env:
   NETSCALER_ENDPOINT: "https://netscaler.fictionally.org"
-  NETSCALER_SECONDARY_ENDPOINT: "https://netscaler-secondary.fictionally.org"
+  # Secondary uses localhost since it's on the same host (port 8182 maps to 9080 inside container)
+  NETSCALER_SECONDARY_ENDPOINT: "http://localhost:8182"
   LB_URL: "http://185.237.99.238:9090"
   HAPROXY_STATS_URL: "http://185.237.99.238:8404/stats"
 
