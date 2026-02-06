@@ -1,0 +1,20 @@
+name: Test sub action variables
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      ENV_VAR: hello-from-env
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Call sub action
+        uses: ./.github/actions/print-vars
+        with:
+          app_name: my-sample-app
+          api_key: ${{ secrets.MY_API_KEY }}

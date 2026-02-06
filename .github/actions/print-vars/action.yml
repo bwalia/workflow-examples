@@ -1,0 +1,26 @@
+name: "Print vars from workflow"
+description: "Test passing env vars and secrets"
+
+inputs:
+  app_name:
+    required: true
+  api_key:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Show normal variable
+      run: |
+        echo "App name from input: ${{ inputs.app_name }}"
+      shell: bash
+
+    - name: Show secret (masked automatically)
+      run: |
+        echo "API key from input: ${{ inputs.api_key }}"
+      shell: bash
+
+    - name: Show env variable
+      run: |
+        echo "ENV_VAR is: $ENV_VAR"
+      shell: bash
