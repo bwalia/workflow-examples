@@ -1,0 +1,17 @@
+name: Network Debugging
+
+on:
+  workflow_dispatch:  
+
+jobs:
+  network_debugging:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Run network debugging commands
+        run: |
+          chmod +x ./network-debugging-commands.sh && sh ./network-debugging-commands.sh
+         
