@@ -7,8 +7,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    env:
-      ENV_VAR: hello-from-env
+    outputs:
+      IMAGE_REF: ${{ steps.set_image.outputs.IMAGE_REF }}
 
     steps:
       - uses: actions/checkout@v4
@@ -18,3 +18,17 @@ jobs:
         with:
           app_name: my-sample-app
           api_key: ${{ secrets.MY_API_KEY }}
+
+      - name: Set IMAGE_REF output
+        id: set_image
+        run: |
+          echo "IMAGE_REF=nginx" >> "$GITHUB_OUTPUT"
+  test1:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Test 1 job print env var from Test
+
+    steps:
+      - name: Print IMAGE_REF from Test job
+        run: |
+          echo "${{ needs.test.outputs.IMAGE_REF }}"
