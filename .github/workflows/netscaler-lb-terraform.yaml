@@ -25,8 +25,8 @@ on:
 
 env:
   NETSCALER_ENDPOINT: "https://netscaler.fictionally.org"
-  # Secondary uses localhost since it's on the same host (port 8182 maps to 9080 inside container)
-  NETSCALER_SECONDARY_ENDPOINT: "http://localhost:8182"
+  # Secondary uses localhost HTTPS (port 8544 maps to 9443 inside container; CPX 14.1 only has HTTPS management)
+  NETSCALER_SECONDARY_ENDPOINT: "https://localhost:8544"
   LB_URL: "http://185.237.99.238:9090"
   HAPROXY_STATS_URL: "http://185.237.99.238:8404/stats"
 
