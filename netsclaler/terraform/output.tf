@@ -20,7 +20,7 @@ output "cs_vserver_name" {
 
 output "cs_vserver_url" {
   description = "Content Switching VIP URL (accessible via HAProxy)"
-  value       = "http://${var.ns_vip}:8080"
+  value       = "http://${var.ns_vip}:8888"
 }
 
 output "service_group_name" {
