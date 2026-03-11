@@ -11,7 +11,7 @@ resource "citrixadc_csvserver" "cs_vserver" {
   provider    = citrixadc.primary
   name        = "csv_main"
   servicetype = "HTTP"
-  ipv46       = var.ns_vip
+  ipv46       = "*"
   port        = 8080
   state       = "ENABLED"
 
@@ -124,7 +124,7 @@ resource "citrixadc_csvserver" "cs_vserver_secondary" {
   provider    = citrixadc.secondary
   name        = "csv_main"
   servicetype = "HTTP"
-  ipv46       = var.ns_secondary_vip
+  ipv46       = "*"
   port        = 8080
   state       = "ENABLED"
 
