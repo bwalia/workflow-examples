@@ -68,7 +68,7 @@ services:
       netscaler-network:
         ipv4_address: 172.28.0.10
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9080/"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -105,7 +105,7 @@ services:
       netscaler-network:
         ipv4_address: 172.28.0.15
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9080/"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
       interval: 30s
       timeout: 10s
       retries: 3
