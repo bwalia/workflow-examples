@@ -46,7 +46,11 @@ docker_compose_cmd() {
 # Stop existing containers
 stop_containers() {
     log_info "Stopping existing containers..."
-    docker_compose_cmd down --remove-orphans || true
+    docker_compose_cmd down --remove-orphans --volumes || true
+    # Remove any stale volumes from previous CPX versions
+    for vol in netscaler-config netscaler-secondary-config netsclaler_netscaler-config netsclaler_netscaler-secondary-config; do
+        docker_cmd volume rm "$vol" 2>/dev/null || true
+    done
     log_info "Containers stopped"
 }
 

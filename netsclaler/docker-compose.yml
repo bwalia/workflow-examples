@@ -56,8 +56,8 @@ services:
       - EULA=yes
       - NS_CPX_LICENSE_MODE=CPX_EXPRESS
     volumes:
-      - netscaler-logs:/var/log
-      - netscaler-config:/var/netscaler
+      - netscaler-logs:/cpx/log
+      - netscaler-crash:/cpx/crash
     # Use tmpfs for /var/nstmp to ensure proper permissions
     tmpfs:
       - /var/nstmp:rw,exec,mode=0777,size=512m
@@ -93,8 +93,8 @@ services:
       - EULA=yes
       - NS_CPX_LICENSE_MODE=CPX_EXPRESS
     volumes:
-      - netscaler-secondary-logs:/var/log
-      - netscaler-secondary-config:/var/netscaler
+      - netscaler-secondary-logs:/cpx/log
+      - netscaler-secondary-crash:/cpx/crash
     # Use tmpfs for /var/nstmp to ensure proper permissions
     tmpfs:
       - /var/nstmp:rw,exec,mode=0777,size=512m
@@ -335,7 +335,7 @@ services:
 
 volumes:
   netscaler-logs:
-  netscaler-config:
+  netscaler-crash:
   netscaler-secondary-logs:
-  netscaler-secondary-config:
+  netscaler-secondary-crash:
 
