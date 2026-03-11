@@ -27,8 +27,9 @@ resource "citrixadc_cspolicy" "api_policy" {
   provider   = citrixadc.primary
   policyname = "csp_api"
   rule       = "HTTP.REQ.URL.STARTSWITH(\"/api\")"
+  action     = citrixadc_csaction.api_action.name
 
-  depends_on = [citrixadc_csvserver.cs_vserver]
+  depends_on = [citrixadc_csvserver.cs_vserver, citrixadc_csaction.api_action]
 }
 
 # CS Policy: route /web/* to Web App LB vserver
@@ -36,8 +37,9 @@ resource "citrixadc_cspolicy" "web_policy" {
   provider   = citrixadc.primary
   policyname = "csp_web"
   rule       = "HTTP.REQ.URL.STARTSWITH(\"/web\")"
+  action     = citrixadc_csaction.web_action.name
 
-  depends_on = [citrixadc_csvserver.cs_vserver]
+  depends_on = [citrixadc_csvserver.cs_vserver, citrixadc_csaction.web_action]
 }
 
 # CS Action: target API LB vserver
@@ -93,8 +95,9 @@ resource "citrixadc_cspolicy" "default_policy" {
   provider   = citrixadc.primary
   policyname = "csp_default"
   rule       = "true"
+  action     = citrixadc_csaction.default_action.name
 
-  depends_on = [citrixadc_csvserver.cs_vserver]
+  depends_on = [citrixadc_csvserver.cs_vserver, citrixadc_csaction.default_action]
 }
 
 resource "citrixadc_csaction" "default_action" {
@@ -142,16 +145,18 @@ resource "citrixadc_cspolicy" "api_policy_secondary" {
   provider   = citrixadc.secondary
   policyname = "csp_api"
   rule       = "HTTP.REQ.URL.STARTSWITH(\"/api\")"
+  action     = citrixadc_csaction.api_action_secondary.name
 
-  depends_on = [citrixadc_csvserver.cs_vserver_secondary]
+  depends_on = [citrixadc_csvserver.cs_vserver_secondary, citrixadc_csaction.api_action_secondary]
 }
 
 resource "citrixadc_cspolicy" "web_policy_secondary" {
   provider   = citrixadc.secondary
   policyname = "csp_web"
   rule       = "HTTP.REQ.URL.STARTSWITH(\"/web\")"
+  action     = citrixadc_csaction.web_action_secondary.name
 
-  depends_on = [citrixadc_csvserver.cs_vserver_secondary]
+  depends_on = [citrixadc_csvserver.cs_vserver_secondary, citrixadc_csaction.web_action_secondary]
 }
 
 resource "citrixadc_csaction" "api_action_secondary" {
@@ -202,8 +207,9 @@ resource "citrixadc_cspolicy" "default_policy_secondary" {
   provider   = citrixadc.secondary
   policyname = "csp_default"
   rule       = "true"
+  action     = citrixadc_csaction.default_action_secondary.name
 
-  depends_on = [citrixadc_csvserver.cs_vserver_secondary]
+  depends_on = [citrixadc_csvserver.cs_vserver_secondary, citrixadc_csaction.default_action_secondary]
 }
 
 resource "citrixadc_csaction" "default_action_secondary" {
