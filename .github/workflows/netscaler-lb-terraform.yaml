@@ -170,6 +170,13 @@ jobs:
           echo "=== Waiting for backends to become healthy ==="
           sleep 15
 
+      - name: Run deployment test suite
+        if: steps.action.outputs.action != 'destroy'
+        run: |
+          echo "=== Running automated test suite ==="
+          chmod +x ./netsclaler/scripts/test_deployment.sh
+          ./netsclaler/scripts/test_deployment.sh localhost || true
+
       - name: Verify deployment
         if: steps.action.outputs.action != 'destroy'
         run: |
@@ -260,8 +267,39 @@ jobs:
 
           # Test load balancers via HAProxy
           echo "============================================"
+          echo "       CONTENT SWITCHING STATUS"
+          echo "============================================"
+          echo ""
+
+          # Check CS VServer status (Primary)
+          echo "=== Content Switching VServer (Primary) ==="
+          CS_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.password }} \
+            ${{ env.NETSCALER_ENDPOINT }}/nitro/v1/config/csvserver/csv_main | \
+            jq -r '.csvserver[]? | "\(.ipv46):\(.port) - State: \(.curstate)"' 2>/dev/null || echo "N/A")
+          echo "  $CS_STATUS"
+          echo ""
+
+          # Check CS VServer status (Secondary)
+          echo "=== Content Switching VServer (Secondary) ==="
+          SEC_CS_STATUS=$(curl -s -k -u nsroot:${{ steps.ns_password.outputs.secondary_password }} \
+            ${{ env.NETSCALER_SECONDARY_ENDPOINT }}/nitro/v1/config/csvserver/csv_main | \
+            jq -r '.csvserver[]? | "\(.ipv46):\(.port) - State: \(.curstate)"' 2>/dev/null || echo "N/A")
+          echo "  $SEC_CS_STATUS"
+          echo ""
+
+          echo "============================================"
           echo "       LOAD BALANCER TESTS (via HAProxy)"
           echo "============================================"
+          echo ""
+
+          # Test Content Switching VIP
+          echo "=== Content Switching Test (port 9080) ==="
+          CS_DEFAULT=$(curl -s -o /dev/null -w "%{http_code}" -m 10 http://localhost:9080/ || echo "000")
+          CS_API=$(curl -s -o /dev/null -w "%{http_code}" -m 10 http://localhost:9080/api/ || echo "000")
+          CS_WEB=$(curl -s -o /dev/null -w "%{http_code}" -m 10 http://localhost:9080/web/ || echo "000")
+          echo "  Default (/): HTTP $CS_DEFAULT"
+          echo "  API (/api/): HTTP $CS_API"
+          echo "  Web (/web/): HTTP $CS_WEB"
           echo ""
 
           # Test Nginx App load balancer
@@ -358,6 +396,8 @@ jobs:
           echo "=========================================="
           echo ""
           echo "Load Balancer URLs (via HAProxy):"
+          echo "  Content Switch (port 9080): http://185.237.99.238:9080"
+          echo "    /api/ -> API Service, /web/ -> Web App, default -> Nginx"
           echo "  Nginx App (port 9090): ${{ env.LB_URL }}"
           echo "  API Service (port 9091): http://185.237.99.238:9091"
           echo "  Web App (port 9092): http://185.237.99.238:9092"
