@@ -62,31 +62,27 @@ resource "citrixadc_csaction" "web_action" {
 
 # Bind API policy to CS vserver
 resource "citrixadc_csvserver_cspolicy_binding" "api_binding" {
-  provider       = citrixadc.primary
-  name           = citrixadc_csvserver.cs_vserver.name
-  policyname     = citrixadc_cspolicy.api_policy.policyname
-  priority       = 100
-  targetlbvserver = citrixadc_lbvserver.api_lb_vserver.name
+  provider   = citrixadc.primary
+  name       = citrixadc_csvserver.cs_vserver.name
+  policyname = citrixadc_cspolicy.api_policy.policyname
+  priority   = 100
 
   depends_on = [
     citrixadc_csvserver.cs_vserver,
-    citrixadc_cspolicy.api_policy,
-    citrixadc_csaction.api_action
+    citrixadc_cspolicy.api_policy
   ]
 }
 
 # Bind Web policy to CS vserver
 resource "citrixadc_csvserver_cspolicy_binding" "web_binding" {
-  provider       = citrixadc.primary
-  name           = citrixadc_csvserver.cs_vserver.name
-  policyname     = citrixadc_cspolicy.web_policy.policyname
-  priority       = 200
-  targetlbvserver = citrixadc_lbvserver.web_lb_vserver.name
+  provider   = citrixadc.primary
+  name       = citrixadc_csvserver.cs_vserver.name
+  policyname = citrixadc_cspolicy.web_policy.policyname
+  priority   = 200
 
   depends_on = [
     citrixadc_csvserver.cs_vserver,
-    citrixadc_cspolicy.web_policy,
-    citrixadc_csaction.web_action
+    citrixadc_cspolicy.web_policy
   ]
 }
 
@@ -109,16 +105,14 @@ resource "citrixadc_csaction" "default_action" {
 }
 
 resource "citrixadc_csvserver_cspolicy_binding" "default_binding" {
-  provider        = citrixadc.primary
-  name            = citrixadc_csvserver.cs_vserver.name
-  policyname      = citrixadc_cspolicy.default_policy.policyname
-  priority        = 300
-  targetlbvserver = citrixadc_lbvserver.nginx_lb_vserver.name
+  provider   = citrixadc.primary
+  name       = citrixadc_csvserver.cs_vserver.name
+  policyname = citrixadc_cspolicy.default_policy.policyname
+  priority   = 300
 
   depends_on = [
     citrixadc_csvserver.cs_vserver,
-    citrixadc_cspolicy.default_policy,
-    citrixadc_csaction.default_action
+    citrixadc_cspolicy.default_policy
   ]
 }
 
@@ -176,30 +170,26 @@ resource "citrixadc_csaction" "web_action_secondary" {
 }
 
 resource "citrixadc_csvserver_cspolicy_binding" "api_binding_secondary" {
-  provider       = citrixadc.secondary
-  name           = citrixadc_csvserver.cs_vserver_secondary.name
-  policyname     = citrixadc_cspolicy.api_policy_secondary.policyname
-  priority       = 100
-  targetlbvserver = citrixadc_lbvserver.api_lb_vserver_secondary.name
+  provider   = citrixadc.secondary
+  name       = citrixadc_csvserver.cs_vserver_secondary.name
+  policyname = citrixadc_cspolicy.api_policy_secondary.policyname
+  priority   = 100
 
   depends_on = [
     citrixadc_csvserver.cs_vserver_secondary,
-    citrixadc_cspolicy.api_policy_secondary,
-    citrixadc_csaction.api_action_secondary
+    citrixadc_cspolicy.api_policy_secondary
   ]
 }
 
 resource "citrixadc_csvserver_cspolicy_binding" "web_binding_secondary" {
-  provider       = citrixadc.secondary
-  name           = citrixadc_csvserver.cs_vserver_secondary.name
-  policyname     = citrixadc_cspolicy.web_policy_secondary.policyname
-  priority       = 200
-  targetlbvserver = citrixadc_lbvserver.web_lb_vserver_secondary.name
+  provider   = citrixadc.secondary
+  name       = citrixadc_csvserver.cs_vserver_secondary.name
+  policyname = citrixadc_cspolicy.web_policy_secondary.policyname
+  priority   = 200
 
   depends_on = [
     citrixadc_csvserver.cs_vserver_secondary,
-    citrixadc_cspolicy.web_policy_secondary,
-    citrixadc_csaction.web_action_secondary
+    citrixadc_cspolicy.web_policy_secondary
   ]
 }
 
@@ -221,15 +211,13 @@ resource "citrixadc_csaction" "default_action_secondary" {
 }
 
 resource "citrixadc_csvserver_cspolicy_binding" "default_binding_secondary" {
-  provider        = citrixadc.secondary
-  name            = citrixadc_csvserver.cs_vserver_secondary.name
-  policyname      = citrixadc_cspolicy.default_policy_secondary.policyname
-  priority        = 300
-  targetlbvserver = citrixadc_lbvserver.nginx_lb_vserver_secondary.name
+  provider   = citrixadc.secondary
+  name       = citrixadc_csvserver.cs_vserver_secondary.name
+  policyname = citrixadc_cspolicy.default_policy_secondary.policyname
+  priority   = 300
 
   depends_on = [
     citrixadc_csvserver.cs_vserver_secondary,
-    citrixadc_cspolicy.default_policy_secondary,
-    citrixadc_csaction.default_action_secondary
+    citrixadc_cspolicy.default_policy_secondary
   ]
 }
