@@ -19,6 +19,7 @@ services:
     container_name: haproxy
     hostname: haproxy
     ports:
+      - "9080:9080"     # Content Switching VIP (public facing)
       - "9090:9090"     # Nginx App LB (public facing)
       - "9091:9091"     # API Service LB (public facing)
       - "9092:9092"     # Web App LB (public facing)
@@ -47,8 +48,6 @@ services:
     hostname: netscaler-cpx
     privileged: true
     ports:
-      - "9080:80"       # HTTP VIP (direct access)
-      - "9443:443"      # HTTPS VIP (direct access)
       - "9022:22"       # SSH
       - "8443:9443"     # Management HTTPS (NITRO API + GUI)
     environment:
@@ -83,8 +82,6 @@ services:
     hostname: netscaler-cpx-secondary
     privileged: true
     ports:
-      - "9180:80"       # HTTP VIP (direct access - different port)
-      - "9543:443"      # HTTPS VIP (direct access - different port)
       - "9122:22"       # SSH (different port)
       - "8544:9443"     # Management HTTPS (NITRO API + GUI - different port)
     environment:
