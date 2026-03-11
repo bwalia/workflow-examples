@@ -10,8 +10,8 @@ ns_vip = "172.28.0.10"
 # ============================================
 # NetScaler Secondary Configuration (HA)
 # ============================================
-# NetScaler Secondary API endpoint (uses localhost since on same host, port 8182 maps to container 9080)
-ns_secondary_endpoint = "http://localhost:8182"
+# NetScaler Secondary API endpoint (HTTPS only in CPX 14.1, port 8544 maps to container 9443)
+ns_secondary_endpoint = "https://localhost:8544"
 
 # Virtual IP address for Secondary load balancer
 ns_secondary_vip = "172.28.0.15"
