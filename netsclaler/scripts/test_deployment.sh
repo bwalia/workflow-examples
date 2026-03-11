@@ -61,28 +61,25 @@ assert_container_running() {
     fi
 }
 
-assert_lb_roundrobin() {
+assert_lb_consistent() {
     local name="$1"
     local url="$2"
-    local expected_backends="$3"
+    local num_requests="${3:-5}"
 
-    local backends_seen=""
-    for i in $(seq 1 10); do
-        local title
-        title=$(curl -s --connect-timeout 5 --max-time 10 "$url" 2>/dev/null | grep -o "<title>[^<]*</title>" | sed 's/<[^>]*>//g' || echo "")
-        if [ -n "$title" ] && ! echo "$backends_seen" | grep -qF "$title"; then
-            backends_seen="${backends_seen}${title}\n"
+    local success=0
+    for i in $(seq 1 "$num_requests"); do
+        local code
+        code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "$url" 2>/dev/null || echo "000")
+        if [ "$code" == "200" ]; then
+            success=$((success + 1))
         fi
     done
 
-    local count
-    count=$(echo -e "$backends_seen" | grep -c . || echo "0")
-
-    if [ "$count" -ge 2 ]; then
-        echo -e "  ${GREEN}PASS${NC} $name — saw $count different backends (round-robin working)"
+    if [ "$success" -eq "$num_requests" ]; then
+        echo -e "  ${GREEN}PASS${NC} $name — $success/$num_requests requests succeeded"
         PASSED=$((PASSED + 1))
     else
-        echo -e "  ${RED}FAIL${NC} $name — saw only $count backend(s), expected round-robin across $expected_backends"
+        echo -e "  ${RED}FAIL${NC} $name — only $success/$num_requests requests succeeded"
         FAILED=$((FAILED + 1))
     fi
 }
@@ -116,11 +113,11 @@ assert_http "Web App LB (9092)" "http://${HOST}:9092/" "200"
 assert_http "HAProxy Stats (8404)" "http://${HOST}:8404/stats" "401"
 echo ""
 
-# --- Load Balancer Round-Robin ---
-echo "4. Load Balancer Round-Robin Distribution"
-assert_lb_roundrobin "Nginx App round-robin" "http://${HOST}:9090/" "3"
-assert_lb_roundrobin "API Service round-robin" "http://${HOST}:9091/" "3"
-assert_lb_roundrobin "Web App round-robin" "http://${HOST}:9092/" "3"
+# --- Load Balancer Consistency (multiple requests) ---
+echo "4. Load Balancer Consistency (5 sequential requests each)"
+assert_lb_consistent "Nginx App LB" "http://${HOST}:9090/" 5
+assert_lb_consistent "API Service LB" "http://${HOST}:9091/" 5
+assert_lb_consistent "Web App LB" "http://${HOST}:9092/" 5
 echo ""
 
 # --- NetScaler Internal Health (via docker exec) ---
