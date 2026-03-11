@@ -60,7 +60,7 @@ services:
       - netscaler-config:/var/netscaler
     # Use tmpfs for /var/nstmp to ensure proper permissions
     tmpfs:
-      - /var/nstmp:rw,exec,nosuid,size=512m
+      - /var/nstmp:rw,exec,mode=0777,size=512m
     restart: unless-stopped
     mem_limit: 2g
     cpus: 1.0
@@ -97,7 +97,7 @@ services:
       - netscaler-secondary-config:/var/netscaler
     # Use tmpfs for /var/nstmp to ensure proper permissions
     tmpfs:
-      - /var/nstmp:rw,exec,nosuid,size=512m
+      - /var/nstmp:rw,exec,mode=0777,size=512m
     restart: unless-stopped
     mem_limit: 2g
     cpus: 1.0
