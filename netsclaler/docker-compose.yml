@@ -50,8 +50,7 @@ services:
       - "9080:80"       # HTTP VIP (direct access)
       - "9443:443"      # HTTPS VIP (direct access)
       - "9022:22"       # SSH
-      - "8181:9080"     # Management HTTP
-      - "8443:9443"     # Management HTTPS
+      - "8443:9443"     # Management HTTPS (NITRO API + GUI)
     environment:
       - EULA=yes
       - NS_CPX_LICENSE_MODE=CPX_EXPRESS
@@ -87,8 +86,7 @@ services:
       - "9180:80"       # HTTP VIP (direct access - different port)
       - "9543:443"      # HTTPS VIP (direct access - different port)
       - "9122:22"       # SSH (different port)
-      - "8182:9080"     # Management HTTP (different port)
-      - "8544:9443"     # Management HTTPS (different port)
+      - "8544:9443"     # Management HTTPS (NITRO API + GUI - different port)
     environment:
       - EULA=yes
       - NS_CPX_LICENSE_MODE=CPX_EXPRESS
@@ -314,16 +312,15 @@ services:
     ports:
       - "5563:5563"
     environment:
-      - NS_IP=host.docker.internal
-      - NS_PORT=8181
+      - NS_IP=172.28.0.10
+      - NS_PORT=9443
+      - NS_PROTOCOL=https
       - NS_USER=nsroot
       - NS_PASS=1e99e7f1ae1e42f9baa57530535d99fd
       - LOG_LEVEL=INFO
       - EXPORTER_TYPE=Prometheus
       - PROMETHEUS_PORT=5563
     restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
       netscaler-network:
         ipv4_address: 172.28.0.30
