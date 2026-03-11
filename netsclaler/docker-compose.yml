@@ -42,7 +42,7 @@ services:
   # NetScaler CPX Primary - Main Load Balancer
   # ============================================
   netscaler-cpx:
-    image: quay.io/citrix/citrix-k8s-cpx-ingress:13.0-64.35
+    image: quay.io/netscaler/netscaler-cpx:14.1-60.52
     container_name: netscaler-cpx
     hostname: netscaler-cpx
     privileged: true
@@ -79,7 +79,7 @@ services:
   # Takes over if Primary fails
   # ============================================
   netscaler-cpx-secondary:
-    image: quay.io/citrix/citrix-k8s-cpx-ingress:13.0-64.35
+    image: quay.io/netscaler/netscaler-cpx:14.1-60.52
     container_name: netscaler-cpx-secondary
     hostname: netscaler-cpx-secondary
     privileged: true
