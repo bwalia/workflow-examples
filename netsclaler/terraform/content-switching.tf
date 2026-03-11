@@ -12,7 +12,7 @@ resource "citrixadc_csvserver" "cs_vserver" {
   name        = "csv_main"
   servicetype = "HTTP"
   ipv46       = var.ns_vip
-  port        = 9080
+  port        = 8080
   state       = "ENABLED"
 
   depends_on = [
@@ -128,7 +128,7 @@ resource "citrixadc_csvserver" "cs_vserver_secondary" {
   name        = "csv_main"
   servicetype = "HTTP"
   ipv46       = var.ns_secondary_vip
-  port        = 9080
+  port        = 8080
   state       = "ENABLED"
 
   depends_on = [

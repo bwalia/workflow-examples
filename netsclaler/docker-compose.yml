@@ -19,7 +19,7 @@ services:
     container_name: haproxy
     hostname: haproxy
     ports:
-      - "9080:9080"     # Content Switching VIP (public facing)
+      - "9080:9080"     # Content Switching VIP (public facing, routes to CPX port 8080)
       - "9090:9090"     # Nginx App LB (public facing)
       - "9091:9091"     # API Service LB (public facing)
       - "9092:9092"     # Web App LB (public facing)
