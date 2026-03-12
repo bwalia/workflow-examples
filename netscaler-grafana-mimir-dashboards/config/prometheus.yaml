@@ -26,19 +26,19 @@ scrape_configs:
     static_configs:
       - targets: ["ns-sim-ams-01:8000"]
         labels:
-          instance: "nsr1.prd3033.ams.tktm.io"
+          instance: "nsr1.kisaan001.bru.fictionally.org"
           region: "ams"
           role: "primary"
           environment: "dev"
       - targets: ["ns-sim-ams-02:8000"]
         labels:
-          instance: "nsr2.prd3033.ams.tktm.io"
+          instance: "nsr2.kisaan001.bru.fictionally.org"
           region: "ams"
           role: "secondary"
           environment: "dev"
       - targets: ["ns-sim-ash-01:8000"]
         labels:
-          instance: "nsr1.prd3033.ash.tktm.io"
+          instance: "nsr1.kisaan001.lon.fictionally.org"
           region: "ash"
           role: "primary"
           environment: "dev"

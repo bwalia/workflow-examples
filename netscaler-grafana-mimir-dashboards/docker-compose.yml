@@ -10,7 +10,7 @@ services:
       - "8001:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - INSTANCE_NAME=nsr1.prd3033.ams.tktm.io
+      - INSTANCE_NAME=nsr1.kisaan001.bru.fictionally.org
       - INSTANCE_IP=10.78.1.1
       - INSTANCE_REGION=ams
       - INSTANCE_ROLE=primary
@@ -31,7 +31,7 @@ services:
       - "8002:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - INSTANCE_NAME=nsr2.prd3033.ams.tktm.io
+      - INSTANCE_NAME=nsr2.kisaan001.bru.fictionally.org
       - INSTANCE_IP=10.78.1.2
       - INSTANCE_REGION=ams
       - INSTANCE_ROLE=secondary
@@ -52,7 +52,7 @@ services:
       - "8003:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - INSTANCE_NAME=nsr1.prd3033.ash.tktm.io
+      - INSTANCE_NAME=nsr1.kisaan001.lon.fictionally.org
       - INSTANCE_IP=10.100.1.1
       - INSTANCE_REGION=ash
       - INSTANCE_ROLE=primary

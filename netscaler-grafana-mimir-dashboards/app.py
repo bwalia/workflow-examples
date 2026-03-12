@@ -25,7 +25,7 @@ app = Flask(__name__)
 # INSTANCE CONFIGURATION (set via environment variables for multi-instance)
 # ============================================================================
 
-INSTANCE_NAME = os.environ.get("INSTANCE_NAME", "nsr1.prd3033.ams.tktm.io")
+INSTANCE_NAME = os.environ.get("INSTANCE_NAME", "nsr1.kisaan001.bru.fictionally.org")
 INSTANCE_IP = os.environ.get("INSTANCE_IP", "10.78.1.1")
 INSTANCE_REGION = os.environ.get("INSTANCE_REGION", "ams")
 INSTANCE_ROLE = os.environ.get("INSTANCE_ROLE", "primary")  # primary or secondary
@@ -40,7 +40,7 @@ LB_VSERVERS = [
     {"name": "lb_vsrv_web_secure",  "type": "SSL",  "port": "443",  "state": "UP", "domain": "www.ticketmaster.com"},
     {"name": "lb_vsrv_api_gateway", "type": "HTTP", "port": "8080", "state": "UP", "domain": "api.ticketmaster.com"},
     {"name": "lb_vsrv_backend_app", "type": "SSL",  "port": "8443", "state": "UP", "domain": "checkout.ticketmaster.com"},
-    {"name": "lb_vsrv_database",    "type": "TCP",  "port": "3306", "state": "UP", "domain": "db.internal.tktm.io"},
+    {"name": "lb_vsrv_database",    "type": "TCP",  "port": "3306", "state": "UP", "domain": "db.internal.fictionally.org"},
 ]
 
 # Domain lookup for metrics — keyed by vserver name for fast access
@@ -87,19 +87,19 @@ SSL_VSERVERS = [
 
 # SSL Certificates Configuration — per-instance, driven by INSTANCE_NAME env var
 _CERT_CONFIGS = {
-    "nsr1.prd3033.ams.tktm.io": [
+    "nsr1.kisaan001.bru.fictionally.org": [
         {"name": "wildcard_prod_ams", "days_to_expire": 89},
         {"name": "api_gateway_cert", "days_to_expire": 45},
         {"name": "backend_app_cert", "days_to_expire": 12},
         {"name": "monitoring_cert", "days_to_expire": 180},
     ],
-    "nsr2.prd3033.ams.tktm.io": [
+    "nsr2.kisaan001.bru.fictionally.org": [
         {"name": "wildcard_prod_ams", "days_to_expire": 89},
         {"name": "api_gateway_cert", "days_to_expire": 45},
         {"name": "backend_app_cert", "days_to_expire": 12},
         {"name": "monitoring_cert", "days_to_expire": 180},
     ],
-    "nsr1.prd3033.ash.tktm.io": [
+    "nsr1.kisaan001.lon.fictionally.org": [
         {"name": "wildcard_prod_ash", "days_to_expire": 120},
         {"name": "ticketmaster_ssl_cert", "days_to_expire": 7},
         {"name": "payment_gateway_cert", "days_to_expire": 60},
