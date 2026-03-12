@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh root@pop0.wslproxy.com 'cd /home/bwalia/actions-runner-workflow-examples/_work/workflow-examples/workflow-examples && sleep 5 && bash netsclaler/scripts/test_deployment.sh localhost 2>&1')",
+      "Bash(ssh root@pop0.wslproxy.com 'docker exec netscaler-cpx netstat -tlnp | grep 9999')",
+      "Bash(scp /Users/balinderwalia/Documents/Work/workflow-examples/netsclaler/scripts/mgmt-proxy.py root@pop0.wslproxy.com:/home/bwalia/actions-runner-workflow-examples/_work/workflow-examples/workflow-examples/netsclaler/scripts/mgmt-proxy.py)",
+      "Bash(ssh root@pop0.wslproxy.com 'docker restart netscaler-mgmt-proxy 2>&1 && sleep 3 && echo \"\"=== Local test ===\"\" && curl -s -o /dev/null -w \"\"%{http_code}\"\" http://localhost:8180/ && echo \"\"\"\" && echo \"\"=== Full response ===\"\" && curl -s -D - -o /dev/null http://localhost:8180/ 2>&1 | head -10')"
+    ]
+  }
+}
