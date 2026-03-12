@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Web App - Instance 1</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 40px;
+        max-width: 600px;
+        width: 100%;
+        text-align: center;
+      }
+      h1 {
+        color: #667eea;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+      .subtitle {
+        color: #666;
+        font-size: 1.1em;
+        margin-bottom: 30px;
+      }
+      .info-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin: 20px 0;
+        text-align: left;
+      }
+      .info-card h2 {
+        margin-bottom: 15px;
+        font-size: 1.3em;
+      }
+      .info-item {
+        margin: 10px 0;
+        display: flex;
+        justify-content: space-between;
+      }
+      .badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        margin-top: 10px;
+      }
+      .status {
+        color: #fff;
+        font-weight: bold;
+      }
+      .footer {
+        margin-top: 30px;
+        color: #999;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Web App</h1>
+      <p class="subtitle">Frontend Web Server - Instance #1</p>
+
+      <div class="info-card">
+        <h2>Instance Information</h2>
+        <div class="info-item">
+          <span>Status:</span>
+          <span class="status">HEALTHY</span>
+        </div>
+        <div class="info-item">
+          <span>Instance ID:</span>
+          <span>web-app1</span>
+        </div>
+        <div class="info-item">
+          <span>IP Address:</span>
+          <span>172.28.0.31</span>
+        </div>
+        <div class="info-item">
+          <span>Port:</span>
+          <span>80</span>
+        </div>
+        <div class="badge">Load Balanced via NetScaler</div>
+      </div>
+
+      <div class="footer">Powered by NetScaler CPX | Web App | Instance 1</div>
+    </div>
+  </body>
+</html>
