@@ -1,0 +1,420 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "SSL certificate expiry monitoring across all NetScaler instances. Shows days remaining per certificate with traffic-light alerting.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["netscaler", "ssl"],
+      "targetBlank": false,
+      "title": "SSL/TLS Dashboard",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "title": "Summary",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "blue", "value": null}
+            ]
+          },
+          "unit": "short",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+          "expr": "count(citrixadc_ssl_cert_days_to_expire{instance=~\"$instance\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Certificates",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]
+          },
+          "unit": "short",
+          "mappings": [
+            {"options": {"0": {"color": "green", "index": 0, "text": "0"}}, "type": "value"}
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+          "expr": "count(citrixadc_ssl_cert_days_to_expire{instance=~\"$instance\"} <= 14) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "CRITICAL — Expiring ≤14 Days",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1}
+            ]
+          },
+          "unit": "short",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+          "expr": "count(citrixadc_ssl_cert_days_to_expire{instance=~\"$instance\"} > 14 and citrixadc_ssl_cert_days_to_expire{instance=~\"$instance\"} <= 30) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "WARNING — Expiring 15–30 Days",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null}
+            ]
+          },
+          "unit": "short",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+          "expr": "count(citrixadc_ssl_cert_days_to_expire{instance=~\"$instance\"} > 30) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "OK — Expiring > 30 Days",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5},
+      "id": 101,
+      "title": "Certificate Details",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+      "description": "All SSL certificates across all NetScaler instances sorted by days remaining (most critical first). Red < 14d, Orange 14–30d, Yellow 30–60d, Green > 60d.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {
+            "align": "left",
+            "cellOptions": {"type": "auto"},
+            "inspect": false,
+            "minWidth": 120
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 14},
+              {"color": "yellow", "value": 30},
+              {"color": "green", "value": 60}
+            ]
+          },
+          "unit": "d"
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Instance"},
+            "properties": [
+              {"id": "custom.width", "value": 240},
+              {"id": "custom.cellOptions", "value": {"type": "auto"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Certificate"},
+            "properties": [{"id": "custom.width", "value": 220}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Days Remaining"},
+            "properties": [
+              {"id": "custom.width", "value": 160},
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Region"},
+            "properties": [{"id": "custom.width", "value": 80}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Role"},
+            "properties": [{"id": "custom.width", "value": 90}]
+          }
+        ]
+      },
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 6},
+      "id": 5,
+      "options": {
+        "cellHeight": "md",
+        "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false},
+        "showHeader": true,
+        "sortBy": [{"desc": false, "displayName": "Days Remaining"}]
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+          "expr": "citrixadc_ssl_cert_days_to_expire{instance=~\"$instance\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "All Certificates — Days Remaining",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "instance": 0,
+              "certkey": 1,
+              "region": 2,
+              "role": 3,
+              "Value": 4
+            },
+            "renameByName": {
+              "certkey": "Certificate",
+              "instance": "Instance",
+              "region": "Region",
+              "role": "Role",
+              "Value": "Days Remaining"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": [{"desc": false, "displayName": "Days Remaining"}]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 18},
+      "id": 102,
+      "title": "Visual Overview",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+      "description": "Bar gauge showing days remaining per certificate per instance. Sorted ascending — most critical at the top.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "max": 365,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 14},
+              {"color": "yellow", "value": 30},
+              {"color": "green", "value": 60}
+            ]
+          },
+          "unit": "d"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 14, "w": 24, "x": 0, "y": 19},
+      "id": 6,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 22,
+        "minVizWidth": 8,
+        "namePlacement": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+          "expr": "sort(citrixadc_ssl_cert_days_to_expire{instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} / {{certkey}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Certificate Expiry — Bar Gauge (sorted by urgency)",
+      "type": "bargauge"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "tags": ["netscaler", "ssl", "certificates", "expiry"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+        "definition": "label_values(citrixadc_ssl_cert_days_to_expire, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(citrixadc_ssl_cert_days_to_expire, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "label": "Instance",
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {"type": "prometheus", "uid": "mimir-datasource"},
+        "definition": "label_values(citrixadc_ssl_cert_days_to_expire, region)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "region",
+        "options": [],
+        "query": {
+          "query": "label_values(citrixadc_ssl_cert_days_to_expire, region)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "label": "Region",
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "NetScaler — SSL Certificate Expiry",
+  "uid": "ns-ssl-cert-expiry",
+  "version": 0,
+  "weekStart": ""
+}

@@ -1,0 +1,202 @@
+version: "3.4"
+services:
+
+  ns-sim-ams-01:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ns-sim-ams-01
+    ports:
+      - "8001:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - INSTANCE_NAME=nsr1.kisaan001.bru.fictionally.org
+      - INSTANCE_IP=10.78.1.1
+      - INSTANCE_REGION=ams
+      - INSTANCE_ROLE=primary
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  ns-sim-ams-02:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ns-sim-ams-02
+    ports:
+      - "8002:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - INSTANCE_NAME=nsr2.kisaan001.bru.fictionally.org
+      - INSTANCE_IP=10.78.1.2
+      - INSTANCE_REGION=ams
+      - INSTANCE_ROLE=secondary
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  ns-sim-ash-01:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ns-sim-ash-01
+    ports:
+      - "8003:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - INSTANCE_NAME=nsr1.kisaan001.lon.fictionally.org
+      - INSTANCE_IP=10.100.1.1
+      - INSTANCE_REGION=ash
+      - INSTANCE_ROLE=primary
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  minio:
+    image: minio/minio
+    entrypoint: [""]
+    command: ["sh", "-c", "mkdir -p /data/mimir && minio server --quiet /data"]
+    environment:
+      - MINIO_ROOT_USER=mimir
+      - MINIO_ROOT_PASSWORD=supersecret
+    volumes:
+      - minio-data:/data
+
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+    environment:
+      - ENABLE_METRICS=true
+      - HTTP_PORT=8081
+    ports:
+      - "8081:8081"
+
+  grafana:
+    image: grafana/grafana:latest
+    pull_policy: always
+    depends_on:
+      - renderer
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_USERS_DEFAULT_THEME=light
+      - GF_LOG_MODE=console
+      - GF_LOG_LEVEL=info
+      - GF_SERVER_HTTP_ADDR=0.0.0.0
+      - GF_SERVER_PROTOCOL=http
+      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
+      - GF_UNIFIED_ALERTING_SCREENSHOTS_CAPTURE=true
+    volumes:
+      - ./config/grafana-provisioning-dashboards.yaml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yaml:ro
+      - ./config/grafana-provisioning-datasources.yaml:/etc/grafana/provisioning/datasources/provisioning-datasources.yaml:ro
+      # Mimir mixin dashboards (use local placeholders if original path not available)
+      - ./mimir-mixin-dashboards/mimir-alertmanager.json:/var/lib/grafana/dashboards/mimir-alertmanager.json:ro
+      - ./mimir-mixin-dashboards/mimir-compactor.json:/var/lib/grafana/dashboards/mimir-compactor.json:ro
+      - ./mimir-mixin-dashboards/mimir-object-store.json:/var/lib/grafana/dashboards/mimir-object-store.json:ro
+      - ./mimir-mixin-dashboards/mimir-overrides.json:/var/lib/grafana/dashboards/mimir-overrides.json:ro
+      - ./mimir-mixin-dashboards/mimir-queries.json:/var/lib/grafana/dashboards/mimir-queries.json:ro
+      - ./mimir-mixin-dashboards/mimir-reads.json:/var/lib/grafana/dashboards/mimir-reads.json:ro
+      - ./mimir-mixin-dashboards/mimir-ruler.json:/var/lib/grafana/dashboards/mimir-ruler.json:ro
+      - ./mimir-mixin-dashboards/mimir-tenants.json:/var/lib/grafana/dashboards/mimir-tenants.json:ro
+      - ./mimir-mixin-dashboards/mimir-top-tenants.json:/var/lib/grafana/dashboards/mimir-top-tenants.json:ro
+      - ./mimir-mixin-dashboards/mimir-writes.json:/var/lib/grafana/dashboards/mimir-writes.json:ro
+      - ./dashboards/01-system-overview.json:/var/lib/grafana/dashboards/ns-01-system-overview.json:ro
+      - ./dashboards/02-load-balancing.json:/var/lib/grafana/dashboards/ns-02-load-balancing.json:ro
+      - ./dashboards/03-content-switching.json:/var/lib/grafana/dashboards/ns-03-content-switching.json:ro
+      - ./dashboards/04-http-protocol.json:/var/lib/grafana/dashboards/ns-04-http-protocol.json:ro
+      - ./dashboards/05-tcp-network.json:/var/lib/grafana/dashboards/ns-05-tcp-network.json:ro
+      - ./dashboards/06-ssl-tls.json:/var/lib/grafana/dashboards/ns-06-ssl-tls.json:ro
+      - ./dashboards/07-services.json:/var/lib/grafana/dashboards/ns-07-services.json:ro
+      - ./dashboards/08-network-interfaces.json:/var/lib/grafana/dashboards/ns-08-network-interfaces.json:ro
+      - ./dashboards/09-aaa-security.json:/var/lib/grafana/dashboards/ns-09-aaa-security.json:ro
+      - ./dashboards/10-golden-signals.json:/var/lib/grafana/dashboards/ns-10-golden-signals.json:ro
+      - ./dashboards/11-ssl-cert-expiry.json:/var/lib/grafana/dashboards/ns-11-ssl-cert-expiry.json:ro
+      - ./dashboards/12-vserver-health.json:/var/lib/grafana/dashboards/ns-12-vserver-health.json:ro
+      - ./dashboards/13-ha-status.json:/var/lib/grafana/dashboards/ns-13-ha-status.json:ro
+      - ./dashboards/14-security-audit.json:/var/lib/grafana/dashboards/ns-14-security-audit.json:ro
+      - ./dashboards/15-domain-traffic.json:/var/lib/grafana/dashboards/ns-15-domain-traffic.json:ro
+      - ./dashboards/16-capacity-bandwidth.json:/var/lib/grafana/dashboards/ns-16-capacity-bandwidth.json:ro
+      - ./dashboards/17-sla-scorecard.json:/var/lib/grafana/dashboards/ns-17-sla-scorecard.json:ro
+    ports:
+      - 3001:3000
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --log.level=error
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    volumes:
+      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./mimir-mixin-dashboards/rules.yaml:/etc/prometheus/rules.yaml
+    depends_on:
+      - "mimir-1"
+      - "mimir-2"
+      - "mimir-3"
+      - "ns-sim-ams-01"
+      - "ns-sim-ams-02"
+      - "ns-sim-ash-01"
+
+  load-balancer:
+    image: nginx:latest
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - "mimir-1"
+      - "mimir-2"
+      - "mimir-3"
+    ports:
+      - 9009:9009
+
+  mimir-1:
+    image: grafana/mimir:latest
+    command: ["-config.file=/etc/mimir.yaml"]
+    hostname: mimir-1
+    depends_on:
+      - minio
+    volumes:
+      - ./config/mimir.yaml:/etc/mimir.yaml
+      - ./config/alertmanager-fallback-config.yaml:/etc/alertmanager-fallback-config.yaml
+      - mimir-1-data:/data
+
+  mimir-2:
+    image: grafana/mimir:latest
+    command: ["-config.file=/etc/mimir.yaml"]
+    hostname: mimir-2
+    depends_on:
+      - minio
+    volumes:
+      - ./config/mimir.yaml:/etc/mimir.yaml
+      - ./config/alertmanager-fallback-config.yaml:/etc/alertmanager-fallback-config.yaml
+      - mimir-2-data:/data
+
+  mimir-3:
+    image: grafana/mimir:latest
+    command: ["-config.file=/etc/mimir.yaml"]
+    hostname: mimir-3
+    depends_on:
+      - minio
+    volumes:
+      - ./config/mimir.yaml:/etc/mimir.yaml
+      - ./config/alertmanager-fallback-config.yaml:/etc/alertmanager-fallback-config.yaml
+      - mimir-3-data:/data
+
+volumes:
+  mimir-1-data:
+  mimir-2-data:
+  mimir-3-data:
+  minio-data:
