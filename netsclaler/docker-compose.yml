@@ -19,6 +19,7 @@ services:
     container_name: haproxy
     hostname: haproxy
     ports:
+      - "8180:8180"     # NetScaler Management UI (HTTP reverse proxy)
       - "9080:9080"     # Content Switching VIP (public facing, routes to CPX port 8888)
       - "9090:9090"     # Nginx App LB (public facing)
       - "9091:9091"     # API Service LB (public facing)
@@ -71,6 +72,22 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  # ============================================
+  # Management UI Proxy - exposes CPX HTTP management on port 9999
+  # Runs in CPX primary's network namespace to reach localhost:80
+  # ============================================
+  netscaler-mgmt-proxy:
+    image: python:3.9-alpine
+    container_name: netscaler-mgmt-proxy
+    network_mode: "service:netscaler-cpx"
+    volumes:
+      - ./scripts/mgmt-proxy.py:/mgmt-proxy.py:ro
+    command: ["python3", "/mgmt-proxy.py"]
+    restart: unless-stopped
+    depends_on:
+      netscaler-cpx:
+        condition: service_healthy
 
   # ============================================
   # NetScaler CPX Secondary - Backup Load Balancer
