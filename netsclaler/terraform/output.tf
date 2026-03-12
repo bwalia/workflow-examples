@@ -13,9 +13,14 @@ output "lb_vserver_name" {
   value       = citrixadc_lbvserver.nginx_lb_vserver.name
 }
 
-output "lb_vserver_url" {
-  description = "Load Balancer Public URL (accessible via host port)"
-  value       = "http://185.237.99.238:9090"
+output "cs_vserver_name" {
+  description = "Content Switching Virtual Server Name"
+  value       = citrixadc_csvserver.cs_vserver.name
+}
+
+output "cs_vserver_url" {
+  description = "Content Switching VIP URL (accessible via HAProxy)"
+  value       = "http://${var.ns_vip}:8888"
 }
 
 output "service_group_name" {
