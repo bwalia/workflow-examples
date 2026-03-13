@@ -7,6 +7,7 @@ on:
       - master
     paths:
       - "netsclaler/**"
+      - "netscaler/**"
       - ".github/workflows/netscaler-lb-terraform.yaml"
   schedule:
     # Run every day at 4:00 AM UTC
@@ -48,19 +49,28 @@ jobs:
             echo "action=deploy" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check deploy script exists
+      - name: Detect netscaler directory and deploy script
         id: check
         run: |
-          if [ ! -f ./netsclaler/scripts/deploy.sh ]; then
-            echo "::error::deploy.sh not found on this branch - skipping deployment"
+          # Handle both directory spellings (netsclaler on older branches, netscaler on newer)
+          NSDIR=""
+          if [ -d ./netscaler ]; then
+            NSDIR="netscaler"
+          elif [ -d ./netsclaler ]; then
+            NSDIR="netsclaler"
+          fi
+          echo "nsdir=${NSDIR}" >> $GITHUB_OUTPUT
+          if [ -z "$NSDIR" ] || [ ! -f "./${NSDIR}/scripts/deploy.sh" ]; then
+            echo "::warning::deploy.sh not found on this branch - skipping deployment"
             echo "skip=true" >> $GITHUB_OUTPUT
           else
             echo "skip=false" >> $GITHUB_OUTPUT
+            echo "Found deploy script at ./${NSDIR}/scripts/deploy.sh"
           fi
 
       - name: Make deploy script executable
         if: steps.check.outputs.skip != 'true'
-        run: chmod +x ./netsclaler/scripts/deploy.sh
+        run: chmod +x ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh
 
       # ============================================
       # DESTROY (if requested)
@@ -69,13 +79,13 @@ jobs:
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action == 'destroy'
         run: |
           echo "=== Destroying Terraform Resources ==="
-          cd netsclaler/terraform
+          cd ${{ steps.check.outputs.nsdir }}/terraform
           terraform init -input=false -upgrade
           terraform destroy -auto-approve || true
 
           echo "=== Stopping Docker Containers ==="
           cd ../..
-          ./netsclaler/scripts/deploy.sh destroy
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh destroy
 
           echo "=== Infrastructure Destroyed ==="
 
@@ -84,50 +94,50 @@ jobs:
       # ============================================
       - name: Stop existing containers
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
-        run: ./netsclaler/scripts/deploy.sh stop
+        run: ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh stop
 
       - name: Start Docker Compose services
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
-        run: ./netsclaler/scripts/deploy.sh start
+        run: ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh start
 
       - name: Wait for NetScaler instances to be ready (HA)
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
         run: |
           echo "=== Waiting for Primary NetScaler ==="
-          ./netsclaler/scripts/deploy.sh wait "${{ env.NETSCALER_ENDPOINT }}" netscaler-cpx 30
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh wait "${{ env.NETSCALER_ENDPOINT }}" netscaler-cpx 30
 
           echo "=== Waiting for Secondary NetScaler ==="
-          ./netsclaler/scripts/deploy.sh wait "${{ env.NETSCALER_SECONDARY_ENDPOINT }}" netscaler-cpx-secondary 30
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh wait "${{ env.NETSCALER_SECONDARY_ENDPOINT }}" netscaler-cpx-secondary 30
 
           echo "=== Checking HAProxy Status ==="
-          ./netsclaler/scripts/deploy.sh haproxy
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh haproxy
 
       - name: Verify all backend containers are healthy
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
         run: |
           echo "=== Verifying backend containers ==="
-          ./netsclaler/scripts/deploy.sh verify 20
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh verify 20
 
           echo ""
           echo "=== Container Status ==="
-          ./netsclaler/scripts/deploy.sh status
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh status
 
           echo ""
           echo "=== Container IPs ==="
-          ./netsclaler/scripts/deploy.sh ips
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh ips
 
       - name: Get NetScaler passwords (HA)
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
         id: ns_password
         run: |
           echo "=== Retrieving NetScaler Primary password ==="
-          NS_PASSWORD=$(./netsclaler/scripts/deploy.sh password)
+          NS_PASSWORD=$(./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh password)
           echo "::add-mask::$NS_PASSWORD"
           echo "password=$NS_PASSWORD" >> $GITHUB_OUTPUT
           echo "Primary password retrieved successfully"
 
           echo "=== Retrieving NetScaler Secondary password ==="
-          NS_SECONDARY_PASSWORD=$(./netsclaler/scripts/deploy.sh password-secondary)
+          NS_SECONDARY_PASSWORD=$(./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh password-secondary)
           echo "::add-mask::$NS_SECONDARY_PASSWORD"
           echo "secondary_password=$NS_SECONDARY_PASSWORD" >> $GITHUB_OUTPUT
           echo "Secondary password retrieved successfully"
@@ -140,15 +150,15 @@ jobs:
           ESCAPED_PASSWORD=$(printf '%s\n' "${{ steps.ns_password.outputs.password }}" | sed 's/[&/\]/\\&/g')
           ESCAPED_SECONDARY_PASSWORD=$(printf '%s\n' "${{ steps.ns_password.outputs.secondary_password }}" | sed 's/[&/\]/\\&/g')
 
-          sed -i "s/^ns_password = .*/ns_password = \"${ESCAPED_PASSWORD}\"/" netsclaler/terraform/terraform.tfvars
-          sed -i "s/^ns_secondary_password = .*/ns_secondary_password = \"${ESCAPED_SECONDARY_PASSWORD}\"/" netsclaler/terraform/terraform.tfvars
+          sed -i "s/^ns_password = .*/ns_password = \"${ESCAPED_PASSWORD}\"/" ${{ steps.check.outputs.nsdir }}/terraform/terraform.tfvars
+          sed -i "s/^ns_secondary_password = .*/ns_secondary_password = \"${ESCAPED_SECONDARY_PASSWORD}\"/" ${{ steps.check.outputs.nsdir }}/terraform/terraform.tfvars
 
           # Verify passwords were updated (without exposing them)
-          if grep -q '^ns_password = ""' netsclaler/terraform/terraform.tfvars; then
+          if grep -q '^ns_password = ""' ${{ steps.check.outputs.nsdir }}/terraform/terraform.tfvars; then
             echo "ERROR: Primary password was not updated in terraform.tfvars"
             exit 1
           fi
-          if grep -q '^ns_secondary_password = ""' netsclaler/terraform/terraform.tfvars; then
+          if grep -q '^ns_secondary_password = ""' ${{ steps.check.outputs.nsdir }}/terraform/terraform.tfvars; then
             echo "ERROR: Secondary password was not updated in terraform.tfvars"
             exit 1
           fi
@@ -156,21 +166,21 @@ jobs:
 
       - name: Terraform Init
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
-        working-directory: ./netsclaler/terraform
+        working-directory: ./${{ steps.check.outputs.nsdir }}/terraform
         run: |
           echo "=== Initializing Terraform ==="
           terraform init -input=false -upgrade
 
       - name: Terraform Plan
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
-        working-directory: ./netsclaler/terraform
+        working-directory: ./${{ steps.check.outputs.nsdir }}/terraform
         run: |
           echo "=== Planning Terraform changes ==="
           terraform plan -out=tfplan -input=false
 
       - name: Terraform Apply
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
-        working-directory: ./netsclaler/terraform
+        working-directory: ./${{ steps.check.outputs.nsdir }}/terraform
         run: |
           echo "=== Applying Terraform configuration ==="
           terraform apply -auto-approve tfplan
@@ -185,8 +195,8 @@ jobs:
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
         run: |
           echo "=== Running automated test suite ==="
-          chmod +x ./netsclaler/scripts/test_deployment.sh
-          ./netsclaler/scripts/test_deployment.sh localhost || true
+          chmod +x ./${{ steps.check.outputs.nsdir }}/scripts/test_deployment.sh
+          ./${{ steps.check.outputs.nsdir }}/scripts/test_deployment.sh localhost || true
 
       - name: Verify deployment
         if: steps.check.outputs.skip != 'true' && steps.action.outputs.action != 'destroy'
@@ -198,17 +208,17 @@ jobs:
 
           # Check container status
           echo "=== Container Status ==="
-          ./netsclaler/scripts/deploy.sh status
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh status
           echo ""
 
           # Check container IPs
           echo "=== Container IPs ==="
-          ./netsclaler/scripts/deploy.sh ips
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh ips
           echo ""
 
           # Check HAProxy status
           echo "=== HAProxy Status ==="
-          ./netsclaler/scripts/deploy.sh haproxy
+          ./${{ steps.check.outputs.nsdir }}/scripts/deploy.sh haproxy
           echo ""
 
           echo "============================================"
