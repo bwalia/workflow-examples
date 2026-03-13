@@ -81,7 +81,7 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          echo "${{ secrets.KUBE_CONFIG_K3S0 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
           kubectl cluster-info
 
