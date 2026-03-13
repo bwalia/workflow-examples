@@ -52,8 +52,8 @@ jobs:
           echo "environment=${ENV}" >> $GITHUB_OUTPUT
           echo "namespace=${{ vars.NEXUS_NAMESPACE || 'nexus' }}" >> $GITHUB_OUTPUT
           echo "release=${{ vars.NEXUS_RELEASE_NAME || 'nexus' }}" >> $GITHUB_OUTPUT
-          echo "ui_host=${{ vars.NEXUS_UI_HOST || 'nexus.dev.company.com' }}" >> $GITHUB_OUTPUT
-          echo "docker_host=${{ vars.NEXUS_DOCKER_HOST || 'registry.dev.company.com' }}" >> $GITHUB_OUTPUT
+          echo "ui_host=${{ vars.NEXUS_UI_HOST || 'dev-nexus.workstation.co.uk' }}" >> $GITHUB_OUTPUT
+          echo "docker_host=${{ vars.NEXUS_DOCKER_HOST || 'dev-registry.workstation.co.uk' }}" >> $GITHUB_OUTPUT
           echo "storage_size=${{ vars.NEXUS_STORAGE_SIZE || '50Gi' }}" >> $GITHUB_OUTPUT
 
       - name: Install tools
@@ -204,7 +204,7 @@ jobs:
             --set "nexus.docker.registries[0].host=${DOCKER_HOST}" \
             --set "nexus.docker.registries[0].port=5000" \
             --set "nexus.env[0].name=NEXUS_SECURITY_RANDOMPASSWORD" \
-            --set-string "nexus.env[0].value=false" \
+            --set "nexus.env[0].value=false" \
             --atomic \
             --timeout 10m \
             --wait
