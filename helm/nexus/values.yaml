@@ -1,0 +1,54 @@
+# Nexus Repository Manager - Helm Values
+# Override per environment via GitHub Variables or additional -f values files
+
+nexus:
+  docker:
+    enabled: true
+    registries:
+      - host: null  # Set via vars.NEXUS_DOCKER_HOST
+        port: 5000
+  env:
+    - name: NEXUS_SECURITY_RANDOMPASSWORD
+      value: "false"
+    - name: INSTALL4J_ADD_VM_PARAMS
+      value: "-Xms2g -Xmx2g -XX:MaxDirectMemorySize=3g"
+
+persistence:
+  enabled: true
+  storageSize: 50Gi
+  # storageClass: gp3
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+  # hosts and tls set dynamically by workflow
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    cpu: 2
+    memory: 4Gi
+
+# Readiness and liveness probes
+nexusProbe:
+  enabled: true
+  path: /service/rest/v1/status
+  initialDelaySeconds: 120
+  periodSeconds: 30
+  failureThreshold: 6
+
+# Service configuration
+service:
+  type: ClusterIP
+  nexusPort: 8081
+
+# Tolerations / affinity for production scheduling
+tolerations: []
+nodeSelector: {}
