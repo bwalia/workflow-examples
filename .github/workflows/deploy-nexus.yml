@@ -185,15 +185,14 @@ jobs:
             --namespace "$NAMESPACE" \
             $VALUES_ARGS \
             --set ingress.enabled=true \
-            --set "ingress.hostRepo=${DOCKER_HOST}" \
+            --set "ingress.hostRepo=${UI_HOST}" \
             --set "ingress.hostPath=/" \
             --set "ingress.ingressClassName=wslproxy" \
             --set "ingress.annotations.cert-manager\\.io/cluster-issuer=letsencrypt-prod" \
             --set "ingress.tls[0].secretName=nexus-ui-tls" \
             --set "ingress.tls[0].hosts[0]=${UI_HOST}" \
-            --set "ingress.rules[0].host=${UI_HOST}" \
-            --set "ingress.rules[0].http.paths[0].path=/" \
-            --set "ingress.rules[0].http.paths[0].pathType=Prefix" \
+            --set "ingress.tls[1].secretName=nexus-docker-tls" \
+            --set "ingress.tls[1].hosts[0]=${DOCKER_HOST}" \
             --set "persistence.enabled=true" \
             --set "persistence.storageSize=${STORAGE_SIZE}" \
             --set "resources.requests.cpu=500m" \
